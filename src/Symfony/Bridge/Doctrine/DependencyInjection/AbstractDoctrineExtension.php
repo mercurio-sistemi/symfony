@@ -207,10 +207,13 @@ abstract class AbstractDoctrineExtension extends Extension
                 ));
             }
             $mappingDriverDef->setPublic(false);
-            if (false !== strpos($mappingDriverDef->getClass(), 'yml') || false !== strpos($mappingDriverDef->getClass(), 'xml')) {
-                $mappingDriverDef->setArguments(array(array_flip($driverPaths)));
-                $mappingDriverDef->addMethodCall('setGlobalBasename', array('mapping'));
+            if (false !== strpos($mappingDriverDef->getClass(), 'yml')) {
+            	$mappingDriverDef->setArguments(array(array_flip($driverPaths)));
+               	$mappingDriverDef->addMethodCall('setGlobalBasename', array('mapping'));
+            }elseif (false !== strpos($mappingDriverDef->getClass(), 'xml')) {
+                $mappingDriverDef->addMethodCall('setFileExtension', array('.orm.xml'));
             }
+
 
             $container->setDefinition($mappingService, $mappingDriverDef);
 
