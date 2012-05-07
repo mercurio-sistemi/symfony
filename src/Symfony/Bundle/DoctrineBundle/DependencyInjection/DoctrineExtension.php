@@ -188,12 +188,32 @@ class DoctrineExtension extends AbstractDoctrineExtension
 
         $container->setAlias('doctrine.orm.entity_manager', sprintf('doctrine.orm.%s_entity_manager', $config['default_entity_manager']));
 
+
+        $config['entity_managers'] = $this->collectAutoMappings($config['entity_managers'], $container);
+        
         foreach ($config['entity_managers'] as $name => $entityManager) {
             $entityManager['name'] = $name;
             $this->loadOrmEntityManager($entityManager, $container);
         }
     }
+	protected function collectAutoMappings(array $entityManagerConfigs, ContainerBuilder $container){
+	 	$defindedBundles = array_keys($container->getParameter('kernel.bundles'));
+       	foreach ($entityManagerConfigs as $name => $entityManager) {
+       		if(isset($entityManager['auto_mapping']) && $entityManager['auto_mapping']){
 
+       			foreach ($defindedBundles as $bundle){
+       				
+       				foreach ($entityManagerConfigs as $name2 => $entityManager2) {
+       					if($name2 !== $name && isset($entityManager2['mappings'][$bundle])){
+       						continue 2;
+       					}
+       				}
+       				$entityManagerConfigs[$name]['mappings'][$bundle]['mapping']=true;
+	       		}
+       		}
+       	}
+       	return $entityManagerConfigs;
+	}
     /**
      * Loads a configured ORM entity manager.
      *
@@ -203,7 +223,7 @@ class DoctrineExtension extends AbstractDoctrineExtension
     protected function loadOrmEntityManager(array $entityManager, ContainerBuilder $container)
     {
         if ($entityManager['auto_mapping'] && count($this->entityManagers) > 1) {
-            throw new \LogicException('You cannot enable "auto_mapping" when several entity managers are defined.');
+            //throw new \LogicException('You cannot enable "auto_mapping" when several entity managers are defined.');
         }
 
         $ormConfigDef = $container->setDefinition(sprintf('doctrine.orm.%s_configuration', $entityManager['name']), new DefinitionDecorator('doctrine.orm.configuration'));

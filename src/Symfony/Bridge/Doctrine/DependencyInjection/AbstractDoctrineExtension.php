@@ -44,7 +44,7 @@ abstract class AbstractDoctrineExtension extends Extension
      */
     protected function loadMappingInformation(array $objectManager, ContainerBuilder $container)
     {
-        if ($objectManager['auto_mapping']) {
+        if (0 && $objectManager['auto_mapping']) {
             // automatically register bundle mappings
             foreach (array_keys($container->getParameter('kernel.bundles')) as $bundle) {
                 if (!isset($objectManager['mappings'][$bundle])) {
