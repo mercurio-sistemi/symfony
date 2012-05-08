@@ -16,6 +16,7 @@ use Symfony\Component\DependencyInjection\Exception\ParameterCircularReferenceEx
 use Symfony\Component\DependencyInjection\Exception\RuntimeException;
 
 /**
+ * Holds parameters.
  *
  * @author Fabien Potencier <fabien@symfony.com>
  *
@@ -126,6 +127,18 @@ class ParameterBag implements ParameterBagInterface
     }
 
     /**
+     * Removes a parameter.
+     *
+     * @param string $key The key
+     *
+     * @api
+     */
+    public function remove($key)
+    {
+        unset($this->parameters[$key]);
+    }
+
+    /**
      * Replaces parameter placeholders (%name%) by their values for all parameters.
      */
     public function resolve()
@@ -138,7 +151,7 @@ class ParameterBag implements ParameterBagInterface
         foreach ($this->parameters as $key => $value) {
             try {
                 $value = $this->resolveValue($value);
-                $parameters[$key] = is_string($value) ? str_replace('%%', '%', $value) : $value;
+                $parameters[$key] = $this->unescapeValue($value);
             } catch (ParameterNotFoundException $e) {
                 $e->setSourceKey($key);
 
@@ -197,7 +210,7 @@ class ParameterBag implements ParameterBagInterface
         // we do this to deal with non string values (Boolean, integer, ...)
         // as the preg_replace_callback throw an exception when trying
         // a non-string in a parameter value
-        if (preg_match('/^%([^%]+)%$/', $value, $match)) {
+        if (preg_match('/^%([^%\s]+)%$/', $value, $match)) {
             $key = strtolower($match[1]);
 
             if (isset($resolving[$key])) {
@@ -211,7 +224,12 @@ class ParameterBag implements ParameterBagInterface
 
         $self = $this;
 
-        return preg_replace_callback('/(?<!%)%([^%]+)%/', function ($match) use ($self, $resolving, $value) {
+        return preg_replace_callback('/%%|%([^%\s]+)%/', function ($match) use ($self, $resolving, $value) {
+            // skip %%
+            if (!isset($match[1])) {
+                return '%%';
+            }
+
             $key = strtolower($match[1]);
             if (isset($resolving[$key])) {
                 throw new ParameterCircularReferenceException(array_keys($resolving));
@@ -233,5 +251,23 @@ class ParameterBag implements ParameterBagInterface
     public function isResolved()
     {
         return $this->resolved;
+    }
+
+    private function unescapeValue($value)
+    {
+        if (is_string($value)) {
+            return str_replace('%%', '%', $value);
+        }
+
+        if (is_array($value)) {
+            $result = array();
+            foreach ($value as $k => $v) {
+                $result[$k] = $this->unescapeValue($v);
+            }
+
+            return $result;
+        }
+
+        return $value;
     }
 }

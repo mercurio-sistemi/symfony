@@ -1,17 +1,17 @@
 <?php
 
-namespace Symfony\Component\Serializer\Encoder;
-
-use Symfony\Component\Serializer\Exception\UnexpectedValueException;
-
 /*
- * This file is part of the Symfony framework.
+ * This file is part of the Symfony package.
  *
  * (c) Fabien Potencier <fabien@symfony.com>
  *
- * This source file is subject to the MIT license that is bundled
- * with this source code in the file LICENSE.
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
+
+namespace Symfony\Component\Serializer\Encoder;
+
+use Symfony\Component\Serializer\Exception\UnexpectedValueException;
 
 /**
  * Encodes XML data
@@ -54,7 +54,18 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
      */
     public function decode($data, $format)
     {
+        $internalErrors = libxml_use_internal_errors(true);
+        $disableEntities = libxml_disable_entity_loader(true);
+        libxml_clear_errors();
+
         $xml = simplexml_load_string($data);
+        libxml_use_internal_errors($internalErrors);
+        libxml_disable_entity_loader($disableEntities);
+
+        if ($error = libxml_get_last_error()) {
+            throw new UnexpectedValueException($error->message);
+        }
+
         if (!$xml->count()) {
             if (!$xml->attributes()) {
                 return (string) $xml;
@@ -70,6 +81,28 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
 
         return $this->parseXml($xml);
     }
+
+    /**
+      * Checks whether the serializer can encode to given format
+      *
+      * @param string $format format name
+      * @return Boolean
+      */
+     public function supportsEncoding($format)
+     {
+         return 'xml' === $format;
+     }
+
+     /**
+      * Checks whether the serializer can decode from given format
+      *
+      * @param string $format format name
+      * @return Boolean
+      */
+     public function supportsDecoding($format)
+     {
+         return 'xml' === $format;
+     }
 
     /**
      * Sets the root node name
@@ -92,6 +125,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     /**
      * @param DOMNode $node
      * @param string $val
+     *
      * @return Boolean
      */
     final protected function appendXMLString($node, $val)
@@ -110,6 +144,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     /**
      * @param DOMNode $node
      * @param string $val
+     *
      * @return Boolean
      */
     final protected function appendText($node, $val)
@@ -123,6 +158,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     /**
      * @param DOMNode $node
      * @param string $val
+     *
      * @return Boolean
      */
     final protected function appendCData($node, $val)
@@ -136,6 +172,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     /**
      * @param DOMNode $node
      * @param DOMDocumentFragment $fragment
+     *
      * @return Boolean
      */
     final protected function appendDocumentFragment($node, $fragment)
@@ -151,7 +188,9 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
 
     /**
      * Checks the name is a valid xml element name
+     *
      * @param string $name
+     *
      * @return Boolean
      */
     final protected function isElementNameValid($name)
@@ -162,9 +201,10 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     }
 
     /**
-     * Parse the input SimpleXmlElement into an array
+     * Parse the input SimpleXmlElement into an array.
      *
      * @param SimpleXmlElement $node xml to parse
+     *
      * @return array
      */
     private function parseXml($node)
@@ -191,11 +231,8 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
             if ($key === 'item') {
                 if (isset($value['@key'])) {
                     $data[(string) $value['@key']] = $value['#'];
-                } elseif (isset($data['item'])) {
-                    $tmp = $data['item'];
-                    unset($data['item']);
-                    $data[] = $tmp;
-                    $data[] = $value;
+                } else {
+                    $data['item'][] = $value;
                 }
             } elseif (array_key_exists($key, $data)) {
                 if ((false === is_array($data[$key]))  || (false === isset($data[$key][0]))) {
@@ -215,6 +252,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
      *
      * @param DOMNode $parentNode
      * @param array|object $data data
+     *
      * @return Boolean
      */
     private function buildXml($parentNode, $data)
@@ -224,7 +262,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
         if (is_array($data) || $data instanceof \Traversable) {
             foreach ($data as $key => $data) {
                 //Ah this is the magic @ attribute types.
-                if (0 === strpos($key, "@") && is_scalar($data) && $this->isElementNameValid($attributeName = substr($key,1))) {
+                if (0 === strpos($key, "@") && is_scalar($data) && $this->isElementNameValid($attributeName = substr($key, 1))) {
                     $parentNode->setAttribute($attributeName, $data);
                 } elseif ($key === '#') {
                     $append = $this->selectNodeType($parentNode, $data);
@@ -276,8 +314,9 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
      *
      * @param DOMNode      $parentNode
      * @param array|object $data
-     * @param string       $nodename
+     * @param string       $nodeName
      * @param string       $key
+     *
      * @return Boolean
      */
     private function appendNode($parentNode, $data, $nodeName, $key = null)
@@ -296,10 +335,23 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     }
 
     /**
+     * Checks if a value contains any characters which would require CDATA wrapping.
+     *
+     * @param string $val
+     *
+     * @return Boolean
+     */
+    private function needsCdataWrapping($val)
+    {
+        return preg_match('/[<>&]/', $val);
+    }
+
+    /**
      * Tests the value being passed and decide what sort of element to create
      *
      * @param DOMNode $node
      * @param mixed $val
+     *
      * @return Boolean
      */
     private function selectNodeType($node, $val)
@@ -315,8 +367,10 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
             return $this->buildXml($node, $this->serializer->normalize($val, $this->format));
         } elseif (is_numeric($val)) {
             return $this->appendText($node, (string) $val);
-        } elseif (is_string($val)) {
+        } elseif (is_string($val) && $this->needsCdataWrapping($val)) {
             return $this->appendCData($node, $val);
+        } elseif (is_string($val)) {
+            return $this->appendText($node, $val);
         } elseif (is_bool($val)) {
             return $this->appendText($node, (int) $val);
         } elseif ($val instanceof \DOMNode) {

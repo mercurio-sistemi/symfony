@@ -11,10 +11,12 @@
 
 namespace Symfony\Component\DependencyInjection\Dumper;
 
-use Symfony\Component\Yaml\Yaml;
+use Symfony\Component\Yaml\Dumper as YmlDumper;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Parameter;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\DependencyInjection\Exception\RuntimeException;
+use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
  * YamlDumper dumps a service container as a YAML string.
@@ -25,6 +27,22 @@ use Symfony\Component\DependencyInjection\Reference;
  */
 class YamlDumper extends Dumper
 {
+    private $dumper;
+
+    /**
+     * Constructor.
+     *
+     * @param ContainerBuilder $container The service container to dump
+     *
+     * @api
+     */
+    public function __construct(ContainerBuilder $container)
+    {
+        parent::__construct($container);
+
+        $this->dumper = new YmlDumper();
+    }
+
     /**
      * Dumps the service container as an YAML string.
      *
@@ -44,6 +62,7 @@ class YamlDumper extends Dumper
      *
      * @param string $id
      * @param Definition $definition
+     *
      * @return string
      */
     private function addService($id, $definition)
@@ -58,11 +77,11 @@ class YamlDumper extends Dumper
             foreach ($tags as $attributes) {
                 $att = array();
                 foreach ($attributes as $key => $value) {
-                    $att[] = sprintf('%s: %s', Yaml::dump($key), Yaml::dump($value));
+                    $att[] = sprintf('%s: %s', $this->dumper->dump($key), $this->dumper->dump($value));
                 }
                 $att = $att ? ', '.implode(' ', $att) : '';
 
-                $tagsCode .= sprintf("            - { name: %s%s }\n", Yaml::dump($name), $att);
+                $tagsCode .= sprintf("            - { name: %s%s }\n", $this->dumper->dump($name), $att);
             }
         }
         if ($tagsCode) {
@@ -82,15 +101,15 @@ class YamlDumper extends Dumper
         }
 
         if ($definition->getArguments()) {
-            $code .= sprintf("        arguments: %s\n", Yaml::dump($this->dumpValue($definition->getArguments()), 0));
+            $code .= sprintf("        arguments: %s\n", $this->dumper->dump($this->dumpValue($definition->getArguments()), 0));
         }
 
         if ($definition->getProperties()) {
-            $code .= sprintf("        properties: %s\n", Yaml::dump($this->dumpValue($definition->getProperties()), 0));
+            $code .= sprintf("        properties: %s\n", $this->dumper->dump($this->dumpValue($definition->getProperties()), 0));
         }
 
         if ($definition->getMethodCalls()) {
-            $code .= sprintf("        calls:\n            %s\n", str_replace("\n", "\n            ", Yaml::dump($this->dumpValue($definition->getMethodCalls()), 1)));
+            $code .= sprintf("        calls:\n%s\n", $this->dumper->dump($this->dumpValue($definition->getMethodCalls()), 1, 12));
         }
 
         if (ContainerInterface::SCOPE_CONTAINER !== $scope = $definition->getScope()) {
@@ -106,7 +125,7 @@ class YamlDumper extends Dumper
                 }
             }
 
-            $code .= sprintf("        configurator: %s\n", Yaml::dump($callable, 0));
+            $code .= sprintf("        configurator: %s\n", $this->dumper->dump($callable, 0));
         }
 
         return $code;
@@ -117,6 +136,7 @@ class YamlDumper extends Dumper
      *
      * @param string $alias
      * @param string $id
+     *
      * @return string
      */
     private function addServiceAlias($alias, $id)
@@ -168,14 +188,15 @@ class YamlDumper extends Dumper
             $parameters = $this->container->getParameterBag()->all();
         }
 
-        return Yaml::dump(array('parameters' => $parameters), 2);
+        return $this->dumper->dump(array('parameters' => $parameters), 2);
     }
 
     /**
      * Dumps the value to YAML format
      *
      * @param mixed $value
-     * @throws \RuntimeException When trying to dump object or resource
+     *
+     * @throws RuntimeException When trying to dump object or resource
      */
     private function dumpValue($value)
     {
@@ -191,7 +212,7 @@ class YamlDumper extends Dumper
         } elseif (is_object($value) && $value instanceof Parameter) {
             return $this->getParameterCall((string) $value);
         } elseif (is_object($value) || is_resource($value)) {
-            throw new \RuntimeException('Unable to dump a service container if a parameter is an object or a resource.');
+            throw new RuntimeException('Unable to dump a service container if a parameter is an object or a resource.');
         }
 
         return $value;
@@ -202,6 +223,7 @@ class YamlDumper extends Dumper
      *
      * @param string    $id
      * @param Reference $reference
+     *
      * @return string
      */
     private function getServiceCall($id, Reference $reference = null)
@@ -217,6 +239,7 @@ class YamlDumper extends Dumper
      * Gets parameter call.
      *
      * @param string $id
+     *
      * @return string
      */
     private function getParameterCall($id)
@@ -228,6 +251,7 @@ class YamlDumper extends Dumper
      * Prepares parameters
      *
      * @param array $parameters
+     *
      * @return array
      */
     private function prepareParameters($parameters)
@@ -250,6 +274,7 @@ class YamlDumper extends Dumper
      * Escapes arguments
      *
      * @param array $arguments
+     *
      * @return array
      */
     private function escape($arguments)

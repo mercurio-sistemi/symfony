@@ -48,13 +48,14 @@ class MoneyType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function getDefaultOptions(array $options)
+    public function getDefaultOptions()
     {
         return array(
-            'precision' => 2,
-            'grouping'  => false,
-            'divisor'   => 1,
-            'currency'  => 'EUR',
+            'precision'      => 2,
+            'grouping'       => false,
+            'divisor'        => 1,
+            'currency'       => 'EUR',
+            'single_control' => true,
         );
     }
 
@@ -100,11 +101,11 @@ class MoneyType extends AbstractType
 
             // the regex also considers non-break spaces (0xC2 or 0xA0 in UTF-8)
 
-            preg_match('/^([^\s\xc2\xa0]*)[\s\xc2\xa0]*123[,.]00[\s\xc2\xa0]*([^\s\xc2\xa0]*)$/', $pattern, $matches);
+            preg_match('/^([^\s\xc2\xa0]*)[\s\xc2\xa0]*123(?:[,.]0+)?[\s\xc2\xa0]*([^\s\xc2\xa0]*)$/u', $pattern, $matches);
 
             if (!empty($matches[1])) {
                 self::$patterns[\Locale::getDefault()] = $matches[1].' {{ widget }}';
-            } else if (!empty($matches[2])) {
+            } elseif (!empty($matches[2])) {
                 self::$patterns[\Locale::getDefault()] = '{{ widget }} '.$matches[2];
             } else {
                 self::$patterns[\Locale::getDefault()] = '{{ widget }}';

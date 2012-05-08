@@ -38,7 +38,7 @@ abstract class AbstractDoctrineExtension extends Extension
      */
     protected $drivers = array();
 
-    /*
+    /**
      * @param array            $objectManager A configured object manager.
      * @param ContainerBuilder $container     A ContainerBuilder instance
      */
@@ -196,7 +196,7 @@ abstract class AbstractDoctrineExtension extends Extension
                     $args[0] = array_merge(array_values($driverPaths), $args[0]);
                 }
                 $mappingDriverDef->setArguments($args);
-            } else if ($driverType == 'annotation') {
+            } elseif ($driverType == 'annotation') {
                 $mappingDriverDef = new Definition('%'.$this->getObjectManagerElementName('metadata.'.$driverType.'.class%'), array(
                     new Reference($this->getObjectManagerElementName('metadata.annotation_reader')),
                     array_values($driverPaths)

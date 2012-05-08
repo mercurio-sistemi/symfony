@@ -15,6 +15,8 @@ use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
 /**
+ * @author Bernhard Schussek <bschussek@gmail.com>
+ *
  * @api
  */
 class SizeValidator extends ConstraintValidator
@@ -29,38 +31,34 @@ class SizeValidator extends ConstraintValidator
      *
      * @api
      */
-    public function isValid($value, Constraint $constraint)
+    public function validate($value, Constraint $constraint)
     {
         if (null === $value) {
-            return true;
+            return;
         }
 
         if (!is_numeric($value)) {
-            $this->setMessage($constraint->invalidMessage, array(
+            $this->context->addViolation($constraint->invalidMessage, array(
                 '{{ value }}' => $value,
             ));
 
-            return false;
+            return;
         }
 
         if ($value > $constraint->max) {
-            $this->setMessage($constraint->maxMessage, array(
+            $this->context->addViolation($constraint->maxMessage, array(
                 '{{ value }}' => $value,
                 '{{ limit }}' => $constraint->max,
             ));
 
-            return false;
+            return;
         }
 
         if ($value < $constraint->min) {
-            $this->setMessage($constraint->minMessage, array(
+            $this->context->addViolation($constraint->minMessage, array(
                 '{{ value }}' => $value,
                 '{{ limit }}' => $constraint->min,
             ));
-
-            return false;
         }
-
-        return true;
     }
 }

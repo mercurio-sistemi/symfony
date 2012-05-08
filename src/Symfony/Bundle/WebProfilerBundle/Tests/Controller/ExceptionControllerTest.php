@@ -1,12 +1,12 @@
 <?php
 
 /*
- * This file is part of the Symfony framework.
+ * This file is part of the Symfony package.
  *
  * (c) Fabien Potencier <fabien@symfony.com>
  *
- * This source file is subject to the MIT license that is bundled
- * with this source code in the file LICENSE.
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Bundle\WebProfilerBundle\Tests\Controller;
@@ -73,7 +73,7 @@ class ExceptionControllerTest extends TestCase
         $container->register('templating.helper.router', $this->getMockClass('Symfony\\Bundle\\FrameworkBundle\\Templating\\Helper\\RouterHelper'))
             ->addArgument(new Definition($this->getMockClass('Symfony\\Component\\Routing\\RouterInterface')));
         $container->register('twig', 'Twig_Environment');
-        $container->register('templating.engine.twig',$this->getMockClass('Symfony\\Bundle\\TwigBundle\\TwigEngine'))
+        $container->register('templating.engine.twig', $this->getMockClass('Symfony\\Bundle\\TwigBundle\\TwigEngine'))
             ->addArgument($this->getMock('Twig_Environment'))
             ->addArgument($this->getMock('Symfony\\Component\\Templating\\TemplateNameParserInterface'))
             ->addArgument(new Definition($this->getMockClass('Symfony\Component\Config\FileLocatorInterface')))

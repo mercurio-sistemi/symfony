@@ -1,6 +1,8 @@
 README
 ======
 
+[![Build Status](https://secure.travis-ci.org/symfony/symfony.png?branch=master)](http://travis-ci.org/symfony/symfony)
+
 What is Symfony2?
 -----------------
 
@@ -14,7 +16,7 @@ to high traffic ones like Dailymotion or Yahoo! Answers.
 Requirements
 ------------
 
-Symfony2 is only supported on PHP 5.3.2 and up.
+Symfony2 is only supported on PHP 5.3.3 and up.
 
 Installation
 ------------

@@ -1,5 +1,14 @@
 <?php
 
+/*
+ * This file is part of the Symfony package.
+ *
+ * (c) Fabien Potencier <fabien@symfony.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Symfony\Component\Security\Http\RememberMe;
 
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
@@ -14,15 +23,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpKernel\Log\LoggerInterface;
-
-/*
- * This file is part of the Symfony package.
- *
- * (c) Fabien Potencier <fabien@symfony.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
 
 /**
  * Base class implementing the RememberMeServicesInterface
@@ -88,6 +88,7 @@ abstract class AbstractRememberMeServices implements RememberMeServicesInterface
      * cookie was set, decodes it, and hands it to subclasses for further processing.
      *
      * @param Request $request
+     *
      * @return TokenInterface
      */
     public final function autoLogin(Request $request)
@@ -200,6 +201,7 @@ abstract class AbstractRememberMeServices implements RememberMeServicesInterface
      *
      * @param array   $cookieParts
      * @param Request $request
+     *
      * @return TokenInterface
      */
     abstract protected function processAutoLoginCookie(array $cookieParts, Request $request);
@@ -234,6 +236,7 @@ abstract class AbstractRememberMeServices implements RememberMeServicesInterface
      * Decodes the raw cookie value
      *
      * @param string $rawCookie
+     *
      * @return array
      */
     protected function decodeCookie($rawCookie)
@@ -245,6 +248,7 @@ abstract class AbstractRememberMeServices implements RememberMeServicesInterface
      * Encodes the cookie parts
      *
      * @param array $cookieParts
+     *
      * @return string
      */
     protected function encodeCookie(array $cookieParts)
@@ -270,6 +274,7 @@ abstract class AbstractRememberMeServices implements RememberMeServicesInterface
      * Checks whether remember-me capabilities where requested
      *
      * @param Request $request
+     *
      * @return Boolean
      */
     protected function isRememberMeRequested(Request $request)
@@ -278,7 +283,7 @@ abstract class AbstractRememberMeServices implements RememberMeServicesInterface
             return true;
         }
 
-        $parameter = $request->request->get($this->options['remember_me_parameter'], null, true);
+        $parameter = $request->get($this->options['remember_me_parameter'], null, true);
 
         if ($parameter === null && null !== $this->logger) {
             $this->logger->debug(sprintf('Did not send remember-me cookie (remember-me parameter "%s" was not sent).', $this->options['remember_me_parameter']));

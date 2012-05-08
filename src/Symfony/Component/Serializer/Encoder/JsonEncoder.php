@@ -1,16 +1,15 @@
 <?php
 
-namespace Symfony\Component\Serializer\Encoder;
-
-
 /*
- * This file is part of the Symfony framework.
+ * This file is part of the Symfony package.
  *
  * (c) Fabien Potencier <fabien@symfony.com>
  *
- * This source file is subject to the MIT license that is bundled
- * with this source code in the file LICENSE.
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
+
+namespace Symfony\Component\Serializer\Encoder;
 
 /**
  * Encodes JSON data
@@ -33,5 +32,27 @@ class JsonEncoder implements EncoderInterface, DecoderInterface
     public function decode($data, $format)
     {
         return json_decode($data, true);
+    }
+
+    /**
+     * Checks whether the serializer can encode to given format
+     *
+     * @param string $format format name
+     * @return Boolean
+     */
+    public function supportsEncoding($format)
+    {
+        return 'json' === $format;
+    }
+
+    /**
+     * Checks whether the serializer can decode from given format
+     *
+     * @param string $format format name
+     * @return Boolean
+     */
+    public function supportsDecoding($format)
+    {
+        return 'json' === $format;
     }
 }

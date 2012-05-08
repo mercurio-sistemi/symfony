@@ -11,18 +11,14 @@
 
 namespace Symfony\Bundle\FrameworkBundle\Tests\Templating\Helper;
 
-require_once __DIR__.'/Fixtures/StubTemplateNameParser.php';
-require_once __DIR__.'/Fixtures/StubTranslator.php';
-
 use Symfony\Bundle\FrameworkBundle\Templating\Helper\FormHelper;
 use Symfony\Bundle\FrameworkBundle\Templating\Helper\TranslatorHelper;
 use Symfony\Bundle\FrameworkBundle\Tests\Templating\Helper\Fixtures\StubTemplateNameParser;
 use Symfony\Bundle\FrameworkBundle\Tests\Templating\Helper\Fixtures\StubTranslator;
 use Symfony\Component\Form\FormView;
 use Symfony\Component\Templating\PhpEngine;
-use Symfony\Component\Templating\TemplateNameParser;
 use Symfony\Component\Templating\Loader\FilesystemLoader;
-use Symfony\Tests\Component\Form\AbstractTableLayoutTest;
+use Symfony\Component\Form\Tests\AbstractTableLayoutTest;
 
 class FormHelperTableLayoutTest extends AbstractTableLayoutTest
 {
@@ -38,7 +34,7 @@ class FormHelperTableLayoutTest extends AbstractTableLayoutTest
         $loader = new FilesystemLoader(array());
         $engine = new PhpEngine($templateNameParser, $loader);
 
-        $this->helper = new FormHelper($engine, array(
+        $this->helper = new FormHelper($engine, $this->getMock('Symfony\Component\Form\Extension\Csrf\CsrfProvider\CsrfProviderInterface'), array(
             'FrameworkBundle:Form',
             'FrameworkBundle:FormTable'
         ));
@@ -56,32 +52,32 @@ class FormHelperTableLayoutTest extends AbstractTableLayoutTest
 
     protected function renderEnctype(FormView $view)
     {
-        return (string)$this->helper->enctype($view);
+        return (string) $this->helper->enctype($view);
     }
 
     protected function renderLabel(FormView $view, $label = null, array $vars = array())
     {
-        return (string)$this->helper->label($view, $label, $vars);
+        return (string) $this->helper->label($view, $label, $vars);
     }
 
     protected function renderErrors(FormView $view)
     {
-        return (string)$this->helper->errors($view);
+        return (string) $this->helper->errors($view);
     }
 
     protected function renderWidget(FormView $view, array $vars = array())
     {
-        return (string)$this->helper->widget($view, $vars);
+        return (string) $this->helper->widget($view, $vars);
     }
 
     protected function renderRow(FormView $view, array $vars = array())
     {
-        return (string)$this->helper->row($view, $vars);
+        return (string) $this->helper->row($view, $vars);
     }
 
     protected function renderRest(FormView $view, array $vars = array())
     {
-        return (string)$this->helper->rest($view, $vars);
+        return (string) $this->helper->rest($view, $vars);
     }
 
     protected function setTheme(FormView $view, array $themes)

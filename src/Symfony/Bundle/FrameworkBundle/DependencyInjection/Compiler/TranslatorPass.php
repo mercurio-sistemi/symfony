@@ -1,12 +1,12 @@
 <?php
 
 /*
- * This file is part of the Symfony framework.
+ * This file is part of the Symfony package.
  *
  * (c) Fabien Potencier <fabien@symfony.com>
  *
- * This source file is subject to the MIT license that is bundled
- * with this source code in the file LICENSE.
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler;
@@ -25,13 +25,18 @@ class TranslatorPass implements CompilerPassInterface
 
         $loaders = array();
         foreach ($container->findTaggedServiceIds('translation.loader') as $id => $attributes) {
-            $loaders[$id] = $attributes[0]['alias'];
+            $loaders[$id][] = $attributes[0]['alias'];
+            if (isset($attributes[0]['legacy-alias'])) {
+                $loaders[$id][] = $attributes[0]['legacy-alias'];
+            }
         }
 
         if ($container->hasDefinition('translation.loader')) {
             $definition = $container->getDefinition('translation.loader');
-            foreach ($loaders as $id => $format) {
-                $definition->addMethodCall('addLoader', array($format, new Reference($id)));
+            foreach ($loaders as $id => $formats) {
+                foreach ($formats as $format) {
+                    $definition->addMethodCall('addLoader', array($format, new Reference($id)));
+                }
             }
         }
 

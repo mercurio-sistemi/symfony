@@ -32,20 +32,21 @@ class NumberType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function getDefaultOptions(array $options)
+    public function getDefaultOptions()
     {
         return array(
             // default precision is locale specific (usually around 3)
-            'precision'     => null,
-            'grouping'      => false,
-            'rounding_mode' => \NumberFormatter::ROUND_HALFUP,
+            'precision'      => null,
+            'grouping'       => false,
+            'rounding_mode'  => \NumberFormatter::ROUND_HALFUP,
+            'single_control' => true,
         );
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getAllowedOptionValues(array $options)
+    public function getAllowedOptionValues()
     {
         return array(
             'rounding_mode' => array(

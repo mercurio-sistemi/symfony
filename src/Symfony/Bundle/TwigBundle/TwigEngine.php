@@ -11,6 +11,7 @@
 
 namespace Symfony\Bundle\TwigBundle;
 
+use Symfony\Bridge\Twig\TwigEngine as BaseEngine;
 use Symfony\Bundle\FrameworkBundle\Templating\EngineInterface;
 use Symfony\Bundle\FrameworkBundle\Templating\GlobalVariables;
 use Symfony\Bundle\FrameworkBundle\Templating\TemplateReference;
@@ -23,10 +24,8 @@ use Symfony\Component\Config\FileLocatorInterface;
  *
  * @author Fabien Potencier <fabien@symfony.com>
  */
-class TwigEngine implements EngineInterface
+class TwigEngine extends BaseEngine implements EngineInterface
 {
-    protected $environment;
-    protected $parser;
     protected $locator;
 
     /**
@@ -34,17 +33,38 @@ class TwigEngine implements EngineInterface
      *
      * @param \Twig_Environment           $environment A \Twig_Environment instance
      * @param TemplateNameParserInterface $parser      A TemplateNameParserInterface instance
+     * @param FileLocatorInterface        $locator     A FileLocatorInterface instance
      * @param GlobalVariables|null        $globals     A GlobalVariables instance or null
      */
     public function __construct(\Twig_Environment $environment, TemplateNameParserInterface $parser, FileLocatorInterface $locator, GlobalVariables $globals = null)
     {
-        $this->environment = $environment;
-        $this->parser = $parser;
+        parent::__construct($environment, $parser);
+
         $this->locator = $locator;
 
         if (null !== $globals) {
             $environment->addGlobal('app', $globals);
         }
+    }
+
+    public function setDefaultEscapingStrategy($strategy)
+    {
+        $this->environment->getExtension('escaper')->setDefaultStrategy($strategy);
+    }
+
+    public function guessDefaultEscapingStrategy($filename)
+    {
+        // remove .twig
+        $filename = substr($filename, 0, -5);
+
+        // get the format
+        $format = substr($filename, strrpos($filename, '.') + 1);
+
+        if ('js' === $format) {
+            return 'js';
+        }
+
+        return 'html';
     }
 
     /**
@@ -61,7 +81,7 @@ class TwigEngine implements EngineInterface
     public function render($name, array $parameters = array())
     {
         try {
-            return $this->load($name)->render($parameters);
+            return parent::render($name, $parameters);
         } catch (\Twig_Error $e) {
             if ($name instanceof TemplateReference) {
                 try {
@@ -73,42 +93,6 @@ class TwigEngine implements EngineInterface
 
             throw $e;
         }
-    }
-
-    /**
-     * Returns true if the template exists.
-     *
-     * @param mixed $name A template name
-     *
-     * @return Boolean true if the template exists, false otherwise
-     */
-    public function exists($name)
-    {
-        try {
-            $this->load($name);
-        } catch (\InvalidArgumentException $e) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Returns true if this class is able to render the given template.
-     *
-     * @param string $name A template name
-     *
-     * @return Boolean True if this class supports the given resource, false otherwise
-     */
-    public function supports($name)
-    {
-        if ($name instanceof \Twig_Template) {
-            return true;
-        }
-
-        $template = $this->parser->parse($name);
-
-        return 'twig' === $template->get('engine');
     }
 
     /**
@@ -129,27 +113,5 @@ class TwigEngine implements EngineInterface
         $response->setContent($this->render($view, $parameters));
 
         return $response;
-    }
-
-    /**
-     * Loads the given template.
-     *
-     * @param mixed $name A template name or an instance of Twig_Template
-     *
-     * @return \Twig_TemplateInterface A \Twig_TemplateInterface instance
-     *
-     * @throws \InvalidArgumentException if the template does not exist
-     */
-    protected function load($name)
-    {
-        if ($name instanceof \Twig_Template) {
-            return $name;
-        }
-
-        try {
-            return $this->environment->loadTemplate($name);
-        } catch (\Twig_Error_Loader $e) {
-            throw new \InvalidArgumentException($e->getMessage(), $e->getCode(), $e);
-        }
     }
 }

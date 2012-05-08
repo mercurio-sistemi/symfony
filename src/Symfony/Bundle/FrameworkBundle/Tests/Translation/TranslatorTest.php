@@ -13,14 +13,14 @@ namespace Symfony\Bundle\FrameworkBundle\Tests\Translation;
 
 use Symfony\Bundle\FrameworkBundle\Translation\Translator;
 use Symfony\Component\Translation\MessageCatalogue;
-use Symfony\Component\HttpKernel\Util\Filesystem;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\Translation\MessageSelector;
 
 class TranslatorTest extends \PHPUnit_Framework_TestCase
 {
     protected $tmpDir;
 
-    public function setUp()
+    protected function setUp()
     {
         $this->tmpDir = sys_get_temp_dir().'/sf2_translation';
         $this->deleteTmpDir();
@@ -137,7 +137,7 @@ class TranslatorTest extends \PHPUnit_Framework_TestCase
         $translator = new Translator(
             $this->getContainer($loader),
             new MessageSelector(),
-            array('loader' => 'loader'),
+            array('loader' => array('loader')),
             $options
         );
 

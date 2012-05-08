@@ -32,7 +32,7 @@ class XmlFileLoader extends FileLoader
             $xml = $this->parseFile($this->file);
 
             foreach ($xml->namespace as $namespace) {
-                $this->namespaces[(string) $namespace['prefix']] = trim((string) $namespace);
+                $this->addNamespaceAlias((string) $namespace['prefix'], trim((string) $namespace));
             }
 
             foreach ($xml->class as $class) {
@@ -42,6 +42,10 @@ class XmlFileLoader extends FileLoader
 
         if (isset($this->classes[$metadata->getClassName()])) {
             $xml = $this->classes[$metadata->getClassName()];
+
+            foreach ($xml->{'group-sequence-provider'} as $provider) {
+                $metadata->setGroupSequenceProvider(true);
+            }
 
             foreach ($this->parseConstraints($xml->constraint) as $constraint) {
                 $metadata->addConstraint($constraint);
@@ -80,14 +84,14 @@ class XmlFileLoader extends FileLoader
             if (count($node) > 0) {
                 if (count($node->value) > 0) {
                     $options = $this->parseValues($node->value);
-                } else if (count($node->constraint) > 0) {
+                } elseif (count($node->constraint) > 0) {
                     $options = $this->parseConstraints($node->constraint);
-                } else if (count($node->option) > 0) {
+                } elseif (count($node->option) > 0) {
                     $options = $this->parseOptions($node->option);
                 } else {
                     $options = array();
                 }
-            } else if (strlen((string) $node) > 0) {
+            } elseif (strlen((string) $node) > 0) {
                 $options = trim($node);
             } else {
                 $options = null;
@@ -114,7 +118,7 @@ class XmlFileLoader extends FileLoader
             if (count($node) > 0) {
                 if (count($node->value) > 0) {
                     $value = $this->parseValues($node->value);
-                } else if (count($node->constraint) > 0) {
+                } elseif (count($node->constraint) > 0) {
                     $value = $this->parseConstraints($node->constraint);
                 } else {
                     $value = array();
@@ -148,7 +152,7 @@ class XmlFileLoader extends FileLoader
             if (count($node) > 0) {
                 if (count($node->value) > 0) {
                     $value = $this->parseValues($node->value);
-                } else if (count($node->constraint) > 0) {
+                } elseif (count($node->constraint) > 0) {
                     $value = $this->parseConstraints($node->constraint);
                 } else {
                     $value = array();

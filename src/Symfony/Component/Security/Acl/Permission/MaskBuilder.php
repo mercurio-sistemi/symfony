@@ -87,13 +87,13 @@ class MaskBuilder
      * Adds a mask to the permission
      *
      * @param mixed $mask
-     * @return PermissionBuilder
+     * @return MaskBuilder
      */
     public function add($mask)
     {
         if (is_string($mask) && defined($name = 'static::MASK_'.strtoupper($mask))) {
             $mask = constant($name);
-        } else if (!is_int($mask)) {
+        } elseif (!is_int($mask)) {
             throw new \InvalidArgumentException('$mask must be an integer.');
         }
 
@@ -140,13 +140,13 @@ class MaskBuilder
      * Removes a mask from the permission
      *
      * @param mixed $mask
-     * @return PermissionBuilder
+     * @return MaskBuilder
      */
     public function remove($mask)
     {
         if (is_string($mask) && defined($name = 'static::MASK_'.strtoupper($mask))) {
             $mask = constant($name);
-        } else if (!is_int($mask)) {
+        } elseif (!is_int($mask)) {
             throw new \InvalidArgumentException('$mask must be an integer.');
         }
 
@@ -158,7 +158,7 @@ class MaskBuilder
     /**
      * Resets the PermissionBuilder
      *
-     * @return PermissionBuilder
+     * @return MaskBuilder
      */
     public function reset()
     {
