@@ -70,7 +70,8 @@ class PoFileLoader extends ArrayLoader implements LoaderInterface
 
             if ($line === '') {
                 if (is_array($item['translated'])) {
-                    $messages[$item['ids']['singular']] = stripslashes($item['translated'][0]);
+                	$item['ids']['singular'] = stripcslashes($item['ids']['singular']);
+                    $messages[$item['ids']['singular']] = stripcslashes($item['translated'][0]);
                     if (isset($item['ids']['plural'])) {
                         $plurals = array();
                         foreach ($item['translated'] as $plural => $translated) {
@@ -79,7 +80,8 @@ class PoFileLoader extends ArrayLoader implements LoaderInterface
                         $messages[$item['ids']['plural']] = stripcslashes(implode('|', $plurals));
                     }
                 } elseif(!empty($item['ids']['singular'])) {
-                    $messages[$item['ids']['singular']] = stripslashes($item['translated']);
+                	$item['ids']['singular'] = stripcslashes($item['ids']['singular']);
+                    $messages[$item['ids']['singular']] = stripcslashes($item['translated']);
                 }
                 $item = $defaults;
             } elseif (substr($line, 0, 7) === 'msgid "') {
