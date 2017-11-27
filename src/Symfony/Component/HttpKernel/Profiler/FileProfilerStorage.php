@@ -34,12 +34,12 @@ class FileProfilerStorage implements ProfilerStorageInterface
     public function __construct($dsn)
     {
         if (0 !== strpos($dsn, 'file:')) {
-            throw new \RuntimeException(sprintf('Please check your configuration. You are trying to use FileStorage with an invalid dsn "%s". The expected format is "file:/path/to/the/storage/folder".', $this->dsn));
+            throw new \RuntimeException(sprintf('Please check your configuration. You are trying to use FileStorage with an invalid dsn "%s". The expected format is "file:/path/to/the/storage/folder".', $dsn));
         }
         $this->folder = substr($dsn, 5);
 
         if (!is_dir($this->folder)) {
-            mkdir($this->folder);
+            mkdir($this->folder, 0777, true);
         }
     }
 
@@ -58,10 +58,7 @@ class FileProfilerStorage implements ProfilerStorageInterface
         fseek($file, 0, SEEK_END);
 
         $result = array();
-
-        while ($limit > 0) {
-            $line = $this->readLineFromFile($file);
-
+        while (count($result) < $limit && $line = $this->readLineFromFile($file)) {
             if (false === $line) {
                 break;
             }
@@ -84,7 +81,6 @@ class FileProfilerStorage implements ProfilerStorageInterface
                 'time'   => $csvTime,
                 'parent' => $csvParent,
             );
-            --$limit;
         }
 
         fclose($file);
@@ -129,10 +125,13 @@ class FileProfilerStorage implements ProfilerStorageInterface
     {
         $file = $this->getFilename($profile->getToken());
 
-        // Create directory
-        $dir = dirname($file);
-        if (!is_dir($dir)) {
-            mkdir($dir, 0777, true);
+        $profileIndexed = is_file($file);
+        if (!$profileIndexed) {
+            // Create directory
+            $dir = dirname($file);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
         }
 
         // Store profile
@@ -151,20 +150,22 @@ class FileProfilerStorage implements ProfilerStorageInterface
             return false;
         }
 
-        // Add to index
-        if (false === $file = fopen($this->getIndexFilename(), 'a')) {
-            return false;
-        }
+        if (!$profileIndexed) {
+            // Add to index
+            if (false === $file = fopen($this->getIndexFilename(), 'a')) {
+                return false;
+            }
 
-        fputcsv($file, array(
-            $profile->getToken(),
-            $profile->getIp(),
-            $profile->getMethod(),
-            $profile->getUrl(),
-            $profile->getTime(),
-            $profile->getParentToken(),
-        ));
-        fclose($file);
+            fputcsv($file, array(
+                $profile->getToken(),
+                $profile->getIp(),
+                $profile->getMethod(),
+                $profile->getUrl(),
+                $profile->getTime(),
+                $profile->getParentToken(),
+            ));
+            fclose($file);
+        }
 
         return true;
     }
@@ -200,7 +201,7 @@ class FileProfilerStorage implements ProfilerStorageInterface
      *
      * @param resource $file The file resource, with the pointer placed at the end of the line to read
      *
-     * @return mixed A string representating the line or FALSE if beginning of file is reached
+     * @return mixed A string representing the line or FALSE if beginning of file is reached
      */
     protected function readLineFromFile($file)
     {

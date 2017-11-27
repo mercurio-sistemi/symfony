@@ -17,6 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Config\Definition\NodeInterface;
 use Symfony\Component\Config\Definition\ArrayNode;
 use Symfony\Component\Config\Definition\PrototypedArrayNode;
+use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 /**
  * A console command for dumping available configuration reference
@@ -61,7 +62,7 @@ EOF
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->output = $output;
-        $kernel = $this->getContainer()->get('kernel');
+        $bundles = $this->getContainer()->get('kernel')->getBundles();
         $containerBuilder = $this->getContainerBuilder();
 
         $name = $input->getArgument('name');
@@ -70,7 +71,10 @@ EOF
 
         if (preg_match('/Bundle$/', $name)) {
             // input is bundle name
-            $extension = $kernel->getBundle($name)->getContainerExtension();
+
+            if (isset($bundles[$name])) {
+                $extension = $bundles[$name]->getContainerExtension();
+            }
 
             if (!$extension) {
                 throw new \LogicException('No extensions with configuration available for "'.$name.'"');
@@ -78,7 +82,7 @@ EOF
 
             $message = 'Default configuration for "'.$name.'"';
         } else {
-            foreach ($kernel->getBundles() as $bundle) {
+            foreach ($bundles as $bundle) {
                 $extension = $bundle->getContainerExtension();
 
                 if ($extension && $extension->getAlias() === $name) {
@@ -102,6 +106,12 @@ EOF
                     '" does not have it\'s getConfiguration() method setup');
         }
 
+        if (!$configuration instanceof ConfigurationInterface) {
+            throw new \LogicException(
+                'Configuration class "'.get_class($configuration).
+                '" should implement ConfigurationInterface in order to be dumpable');
+        }
+
         $rootNode = $configuration->getConfigTreeBuilder()->buildTree();
 
         $output->writeln($message);
@@ -114,7 +124,7 @@ EOF
      * Outputs a single config reference line
      *
      * @param string $text
-     * @param int $indent
+     * @param int    $indent
      */
     private function outputLine($text, $indent = 0)
     {
@@ -150,7 +160,7 @@ EOF
 
     /**
      * @param NodeInterface $node
-     * @param int $depth
+     * @param int           $depth
      */
     private function outputNode(NodeInterface $node, $depth = 0)
     {
@@ -203,6 +213,12 @@ EOF
                     $default = 'false';
                 } elseif (null === $default) {
                     $default = '~';
+                } elseif (is_array($default)) {
+                    if ($node->hasDefaultValue() && count($defaultArray = $node->getDefaultValue())) {
+                        $default = '';
+                    } elseif (!is_array($example)) {
+                        $default = '[]';
+                    }
                 }
             }
         }
@@ -220,10 +236,12 @@ EOF
         $default = (string) $default != '' ? ' '.$default : '';
         $comments = count($comments) ? '# '.implode(', ', $comments) : '';
 
-        $text = sprintf('%-20s %s %s', $node->getName().':', $default, $comments);
+        $text = rtrim(sprintf('%-20s %s %s', $node->getName() . ':', $default, $comments), ' ');
 
         if ($info = $node->getInfo()) {
             $this->outputLine('');
+            // indenting multi-line info
+            $info = str_replace("\n", sprintf("\n%" . $depth * 4 . "s# ", ' '), $info);
             $this->outputLine('# '.$info, $depth * 4);
         }
 

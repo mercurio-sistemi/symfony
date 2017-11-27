@@ -50,6 +50,15 @@ class XmlEncoderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $this->encoder->encode($obj, 'xml'));
     }
 
+    /**
+     * @expectedException        UnexpectedValueException
+     * @expectedExceptionMessage Document types are not allowed.
+     */
+    public function testDocTypeIsNotAllowed()
+    {
+        $this->encoder->decode('<?xml version="1.0"?><!DOCTYPE foo><foo></foo>', 'foo');
+    }
+
     public function testAttributes()
     {
         $obj = new ScalarDummy;
@@ -242,20 +251,55 @@ class XmlEncoderTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $this->encoder->decode($source, 'xml'));
     }
 
-    /**
-     * @expectedException Symfony\Component\Serializer\Exception\UnexpectedValueException
-     */
+    public function testDecodeWithoutItemHash()
+    {
+        $obj = new ScalarDummy;
+        $obj->xmlFoo = array(
+            'foo-bar' => array(
+                '@key' => "value",
+                'item' => array("@key" => 'key', "key-val" => 'val')
+            ),
+            'Foo' => array(
+                'Bar' => "Test",
+                '@Type' => 'test'
+            ),
+            'föo_bär' => 'a',
+            "Bar" => array(1,2,3),
+            'a' => 'b',
+        );
+        $expected = array(
+            'foo-bar' => array(
+                '@key' => "value",
+                'key' => array('@key' => 'key', "key-val" => 'val')
+            ),
+            'Foo' => array(
+                'Bar' => "Test",
+                '@Type' => 'test'
+            ),
+            'föo_bär' => 'a',
+            "Bar" => array(1,2,3),
+            'a' => 'b',
+        );
+        $xml = $this->encoder->encode($obj, 'xml');
+        $this->assertEquals($expected, $this->encoder->decode($xml, 'xml'));
+    }
+
     public function testPreventsComplexExternalEntities()
     {
         $oldCwd = getcwd();
         chdir(__DIR__);
 
         try {
-            $decoded = $this->encoder->decode('<?xml version="1.0"?><!DOCTYPE scan[<!ENTITY test SYSTEM "php://filter/read=convert.base64-encode/resource=XmlEncoderTest.php">]><scan>&test;</scan>', 'xml');
+            $this->encoder->decode('<?xml version="1.0"?><!DOCTYPE scan[<!ENTITY test SYSTEM "php://filter/read=convert.base64-encode/resource=XmlEncoderTest.php">]><scan>&test;</scan>', 'xml');
             chdir($oldCwd);
-        } catch (UnexpectedValueException $e) {
+
+            $this->fail('No exception was thrown.');
+        } catch (\Exception $e) {
             chdir($oldCwd);
-            throw $e;
+
+            if (!$e instanceof UnexpectedValueException) {
+                $this->fail('Expected UnexpectedValueException');
+            }
         }
     }
 

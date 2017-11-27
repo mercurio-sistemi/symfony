@@ -11,8 +11,6 @@
 
 namespace Symfony\Component\Routing\Generator\Dumper;
 
-use Symfony\Component\Routing\Route;
-
 /**
  * PhpGeneratorDumper creates a PHP class able to generate URLs for a given set of routes.
  *
@@ -31,7 +29,7 @@ class PhpGeneratorDumper extends GeneratorDumper
      *  * class:      The class name
      *  * base_class: The base class name
      *
-     * @param  array  $options An array of options
+     * @param array $options An array of options
      *
      * @return string A PHP class representing the generator class
      *
@@ -49,6 +47,7 @@ class PhpGeneratorDumper extends GeneratorDumper
 
 use Symfony\Component\Routing\RequestContext;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
+use Symfony\Component\HttpKernel\Log\LoggerInterface;
 
 /**
  * {$options['class']}
@@ -63,9 +62,10 @@ class {$options['class']} extends {$options['base_class']}
     /**
      * Constructor.
      */
-    public function __construct(RequestContext \$context)
+    public function __construct(RequestContext \$context, LoggerInterface \$logger = null)
     {
         \$this->context = \$context;
+        \$this->logger = \$logger;
     }
 
 {$this->generateGenerateMethod()}
@@ -88,8 +88,8 @@ EOF;
 
             $properties = array();
             $properties[] = $compiledRoute->getVariables();
-            $properties[] = $compiledRoute->getDefaults();
-            $properties[] = $compiledRoute->getRequirements();
+            $properties[] = $route->getDefaults();
+            $properties[] = $route->getRequirements();
             $properties[] = $compiledRoute->getTokens();
 
             $routes .= sprintf("        '%s' => %s,\n", $name, str_replace("\n", '', var_export($properties, true)));

@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Response;
  * current request. The propagation of this event is stopped as soon as a
  * response is set.
  *
- * @author Bernhard Schussek <bernhard.schussek@symfony.com>
+ * @author Bernhard Schussek <bschussek@gmail.com>
  *
  * @api
  */
@@ -28,14 +28,14 @@ class GetResponseEvent extends KernelEvent
 {
     /**
      * The response object
-     * @var Symfony\Component\HttpFoundation\Response
+     * @var Response
      */
     private $response;
 
     /**
      * Returns the response object
      *
-     * @return Symfony\Component\HttpFoundation\Response
+     * @return Response
      *
      * @api
      */
@@ -47,7 +47,7 @@ class GetResponseEvent extends KernelEvent
     /**
      * Sets a response and stops event propagation
      *
-     * @param Symfony\Component\HttpFoundation\Response $response
+     * @param Response $response
      *
      * @api
      */

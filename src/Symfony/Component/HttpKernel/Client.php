@@ -52,7 +52,7 @@ class Client extends BaseClient
     /**
      * Makes a request.
      *
-     * @param Request  $request A Request instance
+     * @param Request $request A Request instance
      *
      * @return Response A Response instance
      */
@@ -179,6 +179,11 @@ EOF;
             $headers['Set-Cookie'] = $cookies;
         }
 
-        return new DomResponse($response->getContent(), $response->getStatusCode(), $headers);
+        // this is needed to support StreamedResponse
+        ob_start();
+        $response->sendContent();
+        $content = ob_get_clean();
+
+        return new DomResponse($content, $response->getStatusCode(), $headers);
     }
 }

@@ -165,10 +165,10 @@ class Profiler
             return;
         }
 
-        $profile = new Profile(uniqid());
+        $profile = new Profile(substr(sha1(uniqid(mt_rand(), true)), 0, 6));
         $profile->setTime(time());
         $profile->setUrl($request->getUri());
-        $profile->setIp($request->server->get('REMOTE_ADDR'));
+        $profile->setIp($request->getClientIp());
         $profile->setMethod($request->getMethod());
 
         $response->headers->set('X-Debug-Token', $profile->getToken());

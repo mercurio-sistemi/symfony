@@ -68,6 +68,14 @@ class HeaderBagTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals( array('bar', 'bor'), $bag->get('foo', 'nope', false), '->get return all values as array');
     }
 
+    public function testSetAssociativeArray()
+    {
+        $bag = new HeaderBag();
+        $bag->set('foo', array('bad-assoc-index' => 'value'));
+        $this->assertSame('value', $bag->get('foo'));
+        $this->assertEquals(array('value'), $bag->get('foo', 'nope', false), 'assoc indices of multi-valued headers are ignored');
+    }
+
     /**
      * @covers Symfony\Component\HttpFoundation\HeaderBag::contains
      */
@@ -115,6 +123,13 @@ class HeaderBagTest extends \PHPUnit_Framework_TestCase
 
         $bag->addCacheControlDirective('s-maxage', 100);
         $this->assertEquals('max-age=10, public, s-maxage=100', $bag->get('cache-control'));
+    }
+
+    public function testCacheControlDirectiveParsingQuotedZero()
+    {
+        $bag = new HeaderBag(array('cache-control' => 'max-age="0"'));
+        $this->assertTrue($bag->hasCacheControlDirective('max-age'));
+        $this->assertEquals(0, $bag->getCacheControlDirective('max-age'));
     }
 
     public function testCacheControlDirectiveOverrideWithReplace()

@@ -12,39 +12,43 @@
 namespace Symfony\Component\Form;
 
 /**
- * A form group bundling multiple form forms
+ * A form group bundling multiple forms in a hierarchical structure.
  *
- * @author Bernhard Schussek <bernhard.schussek@symfony.com>
+ * @author Bernhard Schussek <bschussek@gmail.com>
  */
 interface FormInterface extends \ArrayAccess, \Traversable, \Countable
 {
     /**
      * Sets the parent form.
      *
-     * @param FormInterface $parent The parent form
+     * @param  FormInterface|null $parent The parent form or null if it's the root.
+     *
+     * @return FormInterface The form instance
+     *
+     * @throws Exception\AlreadyBoundException If the form has already been bound.
+     * @throws Exception\FormException         When trying to set a parent for a form with
+     *                                         an empty name.
      */
-    function setParent(FormInterface $parent = null);
+    public function setParent(FormInterface $parent = null);
 
     /**
      * Returns the parent form.
      *
-     * @return FormInterface The parent form
+     * @return FormInterface|null The parent form or null if there is none.
      */
-    function getParent();
-
-    /**
-     * Returns whether the form has a parent.
-     *
-     * @return Boolean
-     */
-    function hasParent();
+    public function getParent();
 
     /**
      * Adds a child to the form.
      *
-     * @param FormInterface $child The FormInterface to add as a child
+     * @param  FormInterface $child The FormInterface to add as a child
+     *
+     * @return FormInterface The form instance
+     *
+     * @throws Exception\AlreadyBoundException If the form has already been bound.
+     * @throws Exception\FormException         When trying to add a child to a non-compound form.
      */
-    function add(FormInterface $child);
+    public function add(FormInterface $child);
 
     /**
      * Returns the child with the given name.
@@ -52,8 +56,10 @@ interface FormInterface extends \ArrayAccess, \Traversable, \Countable
      * @param string $name The name of the child
      *
      * @return FormInterface The child form
+     *
+     * @throws \OutOfBoundsException If the named child does not exist.
      */
-    function get($name);
+    public function get($name);
 
     /**
      * Returns whether a child with the given name exists.
@@ -62,109 +68,120 @@ interface FormInterface extends \ArrayAccess, \Traversable, \Countable
      *
      * @return Boolean
      */
-    function has($name);
+    public function has($name);
 
     /**
      * Removes a child from the form.
      *
-     * @param string $name The name of the child to remove
+     * @param  string $name The name of the child to remove
+     *
+     * @return FormInterface The form instance
+     *
+     * @throws Exception\AlreadyBoundException If the form has already been bound.
      */
-    function remove($name);
+    public function remove($name);
 
     /**
      * Returns all children in this group.
      *
      * @return array An array of FormInterface instances
      */
-    function getChildren();
-
-    /**
-     * Return whether the form has children.
-     *
-     * @return Boolean
-     */
-    function hasChildren();
+    public function all();
 
     /**
      * Returns all errors.
      *
      * @return array An array of FormError instances that occurred during binding
      */
-    function getErrors();
+    public function getErrors();
 
     /**
-     * Updates the field with default data.
+     * Updates the form with default data.
      *
-     * @param array $appData The data formatted as expected for the underlying object
+     * @param  mixed $modelData The data formatted as expected for the underlying object
      *
-     * @return Form The current form
+     * @return FormInterface The form instance
+     *
+     * @throws Exception\AlreadyBoundException If the form has already been bound.
+     * @throws Exception\FormException         If listeners try to call setData in a cycle. Or if
+     *                                         the view data does not match the expected type
+     *                                         according to {@link FormConfigInterface::getDataClass}.
      */
-    function setData($appData);
+    public function setData($modelData);
 
     /**
      * Returns the data in the format needed for the underlying object.
      *
      * @return mixed
      */
-    function getData();
+    public function getData();
 
     /**
      * Returns the normalized data of the field.
      *
-     * @return mixed  When the field is not bound, the default data is returned.
-     *                When the field is bound, the normalized bound data is
-     *                returned if the field is valid, null otherwise.
+     * @return mixed When the field is not bound, the default data is returned.
+     *               When the field is bound, the normalized bound data is
+     *               returned if the field is valid, null otherwise.
      */
-    function getNormData();
+    public function getNormData();
 
     /**
      * Returns the data transformed by the value transformer.
      *
-     * @return string
+     * @return mixed
      */
-    function getClientData();
+    public function getViewData();
 
     /**
      * Returns the extra data.
      *
      * @return array The bound data which do not belong to a child
      */
-    function getExtraData();
+    public function getExtraData();
+
+    /**
+     * Returns the form's configuration.
+     *
+     * @return FormConfigInterface The configuration.
+     */
+    public function getConfig();
 
     /**
      * Returns whether the field is bound.
      *
      * @return Boolean true if the form is bound to input values, false otherwise
      */
-    function isBound();
-
-    /**
-     * Returns the supported types.
-     *
-     * @return array An array of FormTypeInterface
-     */
-    function getTypes();
+    public function isBound();
 
     /**
      * Returns the name by which the form is identified in forms.
      *
-     * @return string  The name of the form.
+     * @return string The name of the form.
      */
-    function getName();
+    public function getName();
+
+    /**
+     * Returns the property path that the form is mapped to.
+     *
+     * @return Util\PropertyPathInterface The property path.
+     */
+    public function getPropertyPath();
 
     /**
      * Adds an error to this form.
      *
-     * @param FormError $error
+     * @param  FormError $error
+     *
+     * @return FormInterface The form instance
      */
-    function addError(FormError $error);
+    public function addError(FormError $error);
 
     /**
-     * Returns whether the form is valid.
+     * Returns whether the form and all children are valid.
      *
      * @return Boolean
      */
-    function isValid();
+    public function isValid();
 
     /**
      * Returns whether the form is required to be filled out.
@@ -175,7 +192,7 @@ interface FormInterface extends \ArrayAccess, \Traversable, \Countable
      *
      * @return Boolean
      */
-    function isRequired();
+    public function isRequired();
 
     /**
      * Returns whether this form is disabled.
@@ -188,56 +205,46 @@ interface FormInterface extends \ArrayAccess, \Traversable, \Countable
      *
      * @return Boolean
      */
-    function isDisabled();
+    public function isDisabled();
 
     /**
      * Returns whether the form is empty.
      *
      * @return Boolean
      */
-    function isEmpty();
+    public function isEmpty();
 
     /**
      * Returns whether the data in the different formats is synchronized.
      *
      * @return Boolean
      */
-    function isSynchronized();
+    public function isSynchronized();
 
     /**
-     * Writes data into the form.
+     * Binds data to the form, transforms and validates it.
      *
-     * @param mixed $data  The data
-     */
-    function bind($data);
-
-    /**
-     * Returns whether the form has an attribute with the given name.
+     * @param  null|string|array $submittedData The data
      *
-     * @param string $name The name of the attribute
-     */
-    function hasAttribute($name);
-
-    /**
-     * Returns the value of the attributes with the given name.
+     * @return FormInterface The form instance
      *
-     * @param string $name The name of the attribute
+     * @throws Exception\AlreadyBoundException If the form has already been bound.
      */
-    function getAttribute($name);
+    public function bind($submittedData);
 
     /**
      * Returns the root of the form tree.
      *
-     * @return FormInterface  The root of the tree
+     * @return FormInterface The root of the tree
      */
-    function getRoot();
+    public function getRoot();
 
     /**
      * Returns whether the field is the root of the form tree.
      *
      * @return Boolean
      */
-    function isRoot();
+    public function isRoot();
 
     /**
      * Creates a view.
@@ -246,5 +253,5 @@ interface FormInterface extends \ArrayAccess, \Traversable, \Countable
      *
      * @return FormView The view
      */
-    function createView(FormView $parent = null);
+    public function createView(FormView $parent = null);
 }

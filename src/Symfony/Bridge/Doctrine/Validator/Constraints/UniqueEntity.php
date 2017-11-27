@@ -21,10 +21,13 @@ use Symfony\Component\Validator\Constraint;
  */
 class UniqueEntity extends Constraint
 {
-    public $message = 'This value is already used';
+    public $message = 'This value is already used.';
     public $service = 'doctrine.orm.validator.unique';
     public $em = null;
+    public $repositoryMethod = 'findBy';
     public $fields = array();
+    public $errorPath = null;
+    public $ignoreNull = true;
 
     public function getRequiredOptions()
     {

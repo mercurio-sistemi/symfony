@@ -22,7 +22,7 @@ use Symfony\Component\HttpFoundation\Response;
  * setResponse() you can set a new response that will be returned to the
  * browser.
  *
- * @author Bernhard Schussek <bernhard.schussek@symfony.com>
+ * @author Bernhard Schussek <bschussek@gmail.com>
  *
  * @api
  */
@@ -30,7 +30,7 @@ class FilterResponseEvent extends KernelEvent
 {
     /**
      * The current response object
-     * @var Symfony\Component\HttpFoundation\Response
+     * @var Response
      */
     private $response;
 
@@ -44,7 +44,7 @@ class FilterResponseEvent extends KernelEvent
     /**
      * Returns the current response object
      *
-     * @return Symfony\Component\HttpFoundation\Response
+     * @return Response
      *
      * @api
      */
@@ -56,7 +56,7 @@ class FilterResponseEvent extends KernelEvent
     /**
      * Sets a new response object
      *
-     * @param Symfony\Component\HttpFoundation\Response $response
+     * @param Response $response
      *
      * @api
      */

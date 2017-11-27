@@ -49,10 +49,9 @@ class TestSessionListener implements EventSubscriberInterface
 
         $session = $this->container->get('session');
         $cookies = $event->getRequest()->cookies;
+
         if ($cookies->has($session->getName())) {
             $session->setId($cookies->get($session->getName()));
-        } else {
-            $session->setId('');
         }
     }
 
@@ -68,16 +67,15 @@ class TestSessionListener implements EventSubscriberInterface
             return;
         }
 
-        if ($session = $event->getRequest()->getSession()) {
+        $session = $event->getRequest()->getSession();
+        if ($session && $session->isStarted()) {
             $session->save();
-
             $params = session_get_cookie_params();
-
             $event->getResponse()->headers->setCookie(new Cookie($session->getName(), $session->getId(), 0 === $params['lifetime'] ? 0 : time() + $params['lifetime'], $params['path'], $params['domain'], $params['secure'], $params['httponly']));
         }
     }
 
-    static public function getSubscribedEvents()
+    public static function getSubscribedEvents()
     {
         return array(
             KernelEvents::REQUEST => array('onKernelRequest', 192),

@@ -24,7 +24,7 @@ use Symfony\Component\Config\Resource\ResourceInterface;
  *
  * @api
  */
-class RouteCollection implements \IteratorAggregate
+class RouteCollection implements \IteratorAggregate, \Countable
 {
     private $routes;
     private $resources;
@@ -86,6 +86,21 @@ class RouteCollection implements \IteratorAggregate
     public function getIterator()
     {
         return new \ArrayIterator($this->routes);
+    }
+
+    /**
+     * Gets the number of Routes in this collection.
+     *
+     * @return int The number of routes in this collection, including nested collections
+     */
+    public function count()
+    {
+        $count = 0;
+        foreach ($this->routes as $route) {
+            $count += $route instanceof RouteCollection ? count($route) : 1;
+        }
+
+        return $count;
     }
 
     /**
@@ -208,25 +223,25 @@ class RouteCollection implements \IteratorAggregate
      */
     public function addPrefix($prefix, $defaults = array(), $requirements = array(), $options = array())
     {
-        // a prefix must not end with a slash
-        $prefix = rtrim($prefix, '/');
+        $prefix = trim(trim($prefix), '/');
 
         if ('' === $prefix && empty($defaults) && empty($requirements) && empty($options)) {
             return;
         }
 
-        // a prefix must start with a slash
-        if ('' !== $prefix && '/' !== $prefix[0]) {
-            $prefix = '/'.$prefix;
+        // a prefix must start with a single slash and must not end with a slash
+        if ('' !== $prefix) {
+            $this->prefix = '/' . $prefix . $this->prefix;
         }
-
-        $this->prefix = $prefix.$this->prefix;
 
         foreach ($this->routes as $route) {
             if ($route instanceof RouteCollection) {
-                $route->addPrefix($prefix, $defaults, $requirements, $options);
+                // we add the slashes so the prefix is not lost by trimming in the sub-collection
+                $route->addPrefix('/' . $prefix . '/', $defaults, $requirements, $options);
             } else {
-                $route->setPattern($prefix.$route->getPattern());
+                if ('' !== $prefix) {
+                    $route->setPattern('/' . $prefix . $route->getPattern());
+                }
                 $route->addDefaults($defaults);
                 $route->addRequirements($requirements);
                 $route->addOptions($options);
@@ -245,6 +260,16 @@ class RouteCollection implements \IteratorAggregate
     }
 
     /**
+     * Sets the prefix (used to resolve placeholders).
+     *
+     * @param string The prefix
+     */
+    public function setPrefix($prefix)
+    {
+        $this->prefix = $prefix;
+    }
+
+    /**
      * Returns an array of resources loaded to build this collection.
      *
      * @return ResourceInterface[] An array of resources
@@ -252,7 +277,7 @@ class RouteCollection implements \IteratorAggregate
     public function getResources()
     {
         $resources = $this->resources;
-        foreach ($this as $routes) {
+        foreach ($this->routes as $routes) {
             if ($routes instanceof RouteCollection) {
                 $resources = array_merge($resources, $routes->getResources());
             }
@@ -293,7 +318,7 @@ class RouteCollection implements \IteratorAggregate
     {
         // It is ensured by the adders (->add and ->addCollection) that there can
         // only be one route per name in all connected collections. So we can stop
-        // interating recursively on the first hit.
+        // iterating recursively on the first hit.
         if (isset($this->routes[$name])) {
             unset($this->routes[$name]);
 

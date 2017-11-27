@@ -153,20 +153,27 @@ abstract class BaseMemcacheProfilerStorage implements ProfilerStorageInterface
             'time'     => $profile->getTime(),
         );
 
+        $profileIndexed = false !== $this->getValue($this->getItemName($profile->getToken()));
+
         if ($this->setValue($this->getItemName($profile->getToken()), $data, $this->lifetime)) {
-            // Add to index
-            $indexName = $this->getIndexName();
 
-            $indexRow = implode("\t", array(
-                $profile->getToken(),
-                $profile->getIp(),
-                $profile->getMethod(),
-                $profile->getUrl(),
-                $profile->getTime(),
-                $profile->getParentToken(),
-            ))."\n";
+            if (!$profileIndexed) {
+                // Add to index
+                $indexName = $this->getIndexName();
 
-            return $this->appendValue($indexName, $indexRow, $this->lifetime);
+                $indexRow = implode("\t", array(
+                    $profile->getToken(),
+                    $profile->getIp(),
+                    $profile->getMethod(),
+                    $profile->getUrl(),
+                    $profile->getTime(),
+                    $profile->getParentToken(),
+                ))."\n";
+
+                return $this->appendValue($indexName, $indexRow, $this->lifetime);
+            }
+
+            return true;
         }
 
         return false;
@@ -185,8 +192,8 @@ abstract class BaseMemcacheProfilerStorage implements ProfilerStorageInterface
      * Store an item on the memcache server under the specified key
      *
      * @param string $key
-     * @param mixed $value
-     * @param int $expiration
+     * @param mixed  $value
+     * @param int    $expiration
      *
      * @return boolean
      */
@@ -205,7 +212,7 @@ abstract class BaseMemcacheProfilerStorage implements ProfilerStorageInterface
      * Append data to an existing item on the memcache server
      * @param string $key
      * @param string $value
-     * @param int $expiration
+     * @param int    $expiration
      *
      * @return boolean
      */

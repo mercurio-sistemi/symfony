@@ -33,7 +33,10 @@ class TimeZoneTransformer extends Transformer
             throw new NotImplementedException('Time zone different than GMT or UTC is not supported as a formatting output.');
         }
 
-        return $dateTime->format('\G\M\TP');
+        // From ICU >= 4.8, the zero offset is not more used, example: GMT instead of GMT+00:00
+        $format = (0 !== (int) $dateTime->format('O')) ? '\G\M\TP' : '\G\M\T';
+
+        return $dateTime->format($format);
     }
 
     /**
@@ -64,7 +67,7 @@ class TimeZoneTransformer extends Transformer
      * Only GMT, Etc/Universal, Etc/Zulu, Etc/Greenwich, Etc/GMT-0, Etc/GMT+0 and Etc/GMT0 are old names and
      * are linked to Etc/GMT or Etc/UTC.
      *
-     * @param  string  $formattedTimeZone A GMT timezone string (GMT-03:00, e.g.)
+     * @param string $formattedTimeZone A GMT timezone string (GMT-03:00, e.g.)
      *
      * @return string                     A timezone identifier
      *
@@ -72,9 +75,9 @@ class TimeZoneTransformer extends Transformer
      * @see    http://www.twinsun.com/tz/tz-link.htm
      *
      * @throws NotImplementedException   When the GMT time zone have minutes offset different than zero
-     * @throws InvalidArgumentException  When the value can not be matched with pattern
+     * @throws \InvalidArgumentException  When the value can not be matched with pattern
      */
-    static public function getEtcTimeZoneId($formattedTimeZone)
+    public static function getEtcTimeZoneId($formattedTimeZone)
     {
         if (preg_match('/GMT(?P<signal>[+-])(?P<hours>\d{2}):?(?P<minutes>\d{2})/', $formattedTimeZone, $matches)) {
             $hours   = (int) $matches['hours'];

@@ -15,9 +15,9 @@ use Symfony\Component\Finder\Finder;
 
 class FinderTest extends Iterator\RealIteratorTestCase
 {
-    static protected $tmpDir;
+    protected static $tmpDir;
 
-    static public function setUpBeforeClass()
+    public static function setUpBeforeClass()
     {
         parent::setUpBeforeClass();
 
@@ -129,23 +129,33 @@ class FinderTest extends Iterator\RealIteratorTestCase
     public function testIgnoreVCS()
     {
         $finder = new Finder();
-        $this->assertSame($finder, $finder->ignoreVCS(false));
-        $this->assertIterator($this->toAbsolute(array('.git', 'foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto')), $finder->in(self::$tmpDir)->getIterator());
+        $this->assertSame($finder, $finder->ignoreVCS(false)->ignoreDotFiles(false));
+        $this->assertIterator($this->toAbsolute(array('.git', 'foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto', '.bar', '.foo', '.foo/.bar')), $finder->in(self::$tmpDir)->getIterator());
 
         $finder = new Finder();
-        $this->assertSame($finder, $finder->ignoreVCS(true));
-        $this->assertIterator($this->toAbsolute(array('foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto')), $finder->in(self::$tmpDir)->getIterator());
+        $finder->ignoreVCS(false)->ignoreVCS(false)->ignoreDotFiles(false);
+        $this->assertIterator($this->toAbsolute(array('.git', 'foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto', '.bar', '.foo', '.foo/.bar')), $finder->in(self::$tmpDir)->getIterator());
+
+        $finder = new Finder();
+        $this->assertSame($finder, $finder->ignoreVCS(true)->ignoreDotFiles(false));
+        $this->assertIterator($this->toAbsolute(array('foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto', '.bar', '.foo', '.foo/.bar')), $finder->in(self::$tmpDir)->getIterator());
+
     }
 
     public function testIgnoreDotFiles()
     {
         $finder = new Finder();
         $this->assertSame($finder, $finder->ignoreDotFiles(false)->ignoreVCS(false));
-        $this->assertIterator($this->toAbsolute(array('.git', 'foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto')), $finder->in(self::$tmpDir)->getIterator());
+        $this->assertIterator($this->toAbsolute(array('.git', '.bar', '.foo', '.foo/.bar', 'foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto')), $finder->in(self::$tmpDir)->getIterator());
 
         $finder = new Finder();
-        $this->assertSame($finder, $finder->ignoreDotFiles(true));
+        $finder->ignoreDotFiles(false)->ignoreDotFiles(false)->ignoreVCS(false);
+        $this->assertIterator($this->toAbsolute(array('.git', '.bar', '.foo', '.foo/.bar', 'foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto')), $finder->in(self::$tmpDir)->getIterator());
+
+        $finder = new Finder();
+        $this->assertSame($finder, $finder->ignoreDotFiles(true)->ignoreVCS(false));
         $this->assertIterator($this->toAbsolute(array('foo', 'foo/bar.tmp', 'test.php', 'test.py', 'toto')), $finder->in(self::$tmpDir)->getIterator());
+
     }
 
     public function testSortByName()
@@ -161,7 +171,6 @@ class FinderTest extends Iterator\RealIteratorTestCase
         $this->assertSame($finder, $finder->sortByType());
         $this->assertIterator($this->toAbsolute(array('foo', 'toto', 'foo/bar.tmp', 'test.php', 'test.py')), $finder->in(self::$tmpDir)->getIterator());
     }
-
 
     public function testSortByAccessedTime()
     {
@@ -266,7 +275,7 @@ class FinderTest extends Iterator\RealIteratorTestCase
 
         $paths = array();
 
-        foreach($finder as $file) {
+        foreach ($finder as $file) {
             $paths[] = $file->getRelativePath();
         }
 
@@ -286,7 +295,7 @@ class FinderTest extends Iterator\RealIteratorTestCase
 
         $paths = array();
 
-        foreach($finder as $file) {
+        foreach ($finder as $file) {
             $paths[] = $file->getRelativePathname();
         }
 
@@ -411,4 +420,86 @@ class FinderTest extends Iterator\RealIteratorTestCase
         );
     }
 
+    public function testContainsOnDirectory()
+    {
+        $finder = new Finder();
+        $finder->in(__DIR__)
+            ->directories()
+            ->name('Fixtures')
+            ->contains('abc');
+        $this->assertIterator(array(), $finder);
+    }
+
+    public function testNotContainsOnDirectory()
+    {
+        $finder = new Finder();
+        $finder->in(__DIR__)
+            ->directories()
+            ->name('Fixtures')
+            ->notContains('abc');
+        $this->assertIterator(array(), $finder);
+    }
+
+    /**
+     * Searching in multiple locations involves AppendIterator which does an unnecessary rewind which leaves FilterIterator
+     * with inner FilesystemIterator in an ivalid state.
+     *
+     * @see https://bugs.php.net/bug.php?id=49104
+     */
+    public function testMultipleLocations()
+    {
+        $locations = array(
+            self::$tmpDir.'/',
+            self::$tmpDir.'/toto/',
+        );
+
+        // it is expected that there are test.py test.php in the tmpDir
+        $finder = new Finder();
+        $finder->in($locations)->depth('< 1')->name('test.php');
+
+        $this->assertEquals(1, count($finder));
+    }
+
+    /**
+     * Searching in multiple locations with sub directories involves
+     * AppendIterator which does an unnecessary rewind which leaves
+     * FilterIterator with inner FilesystemIterator in an ivalid state.
+     *
+     * @see https://bugs.php.net/bug.php?id=49104
+     */
+    public function testMultipleLocationsWithSubDirectories()
+    {
+        $locations = array(
+            __DIR__.'/Fixtures/one',
+            self::$files[8],
+        );
+
+        $finder = new Finder();
+        $finder->in($locations)->depth('< 10')->name('*.neon');
+
+        $expected = array(
+            __DIR__.'/Fixtures/one'.DIRECTORY_SEPARATOR.'b'.DIRECTORY_SEPARATOR.'c.neon',
+            __DIR__.'/Fixtures/one'.DIRECTORY_SEPARATOR.'b'.DIRECTORY_SEPARATOR.'d.neon',
+        );
+
+        $this->assertIterator($expected, $finder);
+        $this->assertIteratorInForeach($expected, $finder);
+    }
+
+    public function testNonSeekableStream()
+    {
+        try {
+            $i = Finder::create()->in('ftp://ftp.mozilla.org/')->depth(0)->getIterator();
+        } catch (\UnexpectedValueException $e) {
+            $this->markTestSkipped(sprintf('Unsupported stream "%s".', 'ftp'));
+        }
+
+        $contains = array(
+            'ftp://ftp.mozilla.org'.DIRECTORY_SEPARATOR.'README',
+            'ftp://ftp.mozilla.org'.DIRECTORY_SEPARATOR.'index.html',
+            'ftp://ftp.mozilla.org'.DIRECTORY_SEPARATOR.'pub',
+        );
+
+        $this->assertIteratorInForeach($contains, $i);
+    }
 }

@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Definition;
 
 class PhpDumperTest extends \PHPUnit_Framework_TestCase
 {
-    static protected $fixturesPath;
+    protected static $fixturesPath;
 
     protected function setUp()
     {
@@ -28,7 +28,7 @@ class PhpDumperTest extends \PHPUnit_Framework_TestCase
         }
     }
 
-    static public function setUpBeforeClass()
+    public static function setUpBeforeClass()
     {
         self::$fixturesPath = realpath(__DIR__.'/../Fixtures/');
     }
@@ -42,6 +42,20 @@ class PhpDumperTest extends \PHPUnit_Framework_TestCase
 
         $container = new ContainerBuilder();
         new PhpDumper($container);
+    }
+
+    public function testDumpFrozenContainerWithNoParameter()
+    {
+        $container = new ContainerBuilder();
+        $container->register('foo', 'stdClass');
+
+        $container->compile();
+
+        $dumper = new PhpDumper($container);
+
+        $dumpedString = $dumper->dump();
+        $this->assertStringEqualsFile(self::$fixturesPath.'/php/services11.php', $dumpedString, '->dump() does not add getDefaultParameters() method call if container have no parameters.');
+        $this->assertNotRegexp("/function getDefaultParameters\(/", $dumpedString, '->dump() does not add getDefaultParameters() method definition.');
     }
 
     public function testDumpOptimizationString()
@@ -89,9 +103,16 @@ class PhpDumperTest extends \PHPUnit_Framework_TestCase
 
     public function testAddService()
     {
+        // without compilation
         $container = include self::$fixturesPath.'/containers/container9.php';
         $dumper = new PhpDumper($container);
         $this->assertEquals(str_replace('%path%', str_replace('\\','\\\\',self::$fixturesPath.DIRECTORY_SEPARATOR.'includes'.DIRECTORY_SEPARATOR), file_get_contents(self::$fixturesPath.'/php/services9.php')), $dumper->dump(), '->dump() dumps services');
+
+        // with compilation
+        $container = include self::$fixturesPath.'/containers/container9.php';
+        $container->compile();
+        $dumper = new PhpDumper($container);
+        $this->assertEquals(str_replace('%path%', str_replace('\\','\\\\',self::$fixturesPath.DIRECTORY_SEPARATOR.'includes'.DIRECTORY_SEPARATOR), file_get_contents(self::$fixturesPath.'/php/services9_compiled.php')), $dumper->dump(), '->dump() dumps services');
 
         $dumper = new PhpDumper($container = new ContainerBuilder());
         $container->register('foo', 'FooClass')->addArgument(new \stdClass());

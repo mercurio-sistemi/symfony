@@ -14,24 +14,48 @@ namespace Symfony\Bridge\Propel1\Form\Type;
 use Symfony\Bridge\Propel1\Form\ChoiceList\ModelChoiceList;
 use Symfony\Bridge\Propel1\Form\DataTransformer\CollectionToArrayTransformer;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Options;
-use Symfony\Component\Form\FormBuilder;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\Options;
+use Symfony\Component\OptionsResolver\OptionsResolverInterface;
 
 /**
  * ModelType class.
  *
  * @author William Durand <william.durand1@gmail.com>
+ * @author Toni Uebernickel <tuebernickel@gmail.com>
+ *
+ * Example using the preferred_choices option.
+ *
+ * <code>
+ *  public function buildForm(FormBuilderInterface $builder, array $options)
+ *  {
+ *      $builder
+ *          ->add('product', 'model', array(
+ *              'class' => 'Model\Product',
+ *              'query' => ProductQuery::create()
+ *                  ->filterIsActive(true)
+ *                  ->useI18nQuery($options['locale'])
+ *                      ->orderByName()
+ *                  ->endUse()
+ *              ,
+ *              'preferred_choices' => ProductQuery::create()
+ *                  ->filterByIsTopProduct(true)
+ *              ,
+ *          ))
+ *      ;
+ *   }
+ * </code>
  */
 class ModelType extends AbstractType
 {
-    public function buildForm(FormBuilder $builder, array $options)
+    public function buildForm(FormBuilderInterface $builder, array $options)
     {
         if ($options['multiple']) {
-            $builder->prependClientTransformer(new CollectionToArrayTransformer());
+            $builder->addViewTransformer(new CollectionToArrayTransformer(), true);
         }
     }
 
-    public function getDefaultOptions()
+    public function setDefaultOptions(OptionsResolverInterface $resolver)
     {
         $choiceList = function (Options $options) {
             return new ModelChoiceList(
@@ -39,11 +63,12 @@ class ModelType extends AbstractType
                 $options['property'],
                 $options['choices'],
                 $options['query'],
-                $options['group_by']
+                $options['group_by'],
+                $options['preferred_choices']
             );
         };
 
-        return array(
+        $resolver->setDefaults(array(
             'template'          => 'choice',
             'multiple'          => false,
             'expanded'          => false,
@@ -54,16 +79,16 @@ class ModelType extends AbstractType
             'choice_list'       => $choiceList,
             'group_by'          => null,
             'by_reference'      => false,
-        );
+        ));
     }
 
-    public function getParent(array $options)
+    public function getParent()
     {
         return 'choice';
     }
 
     public function getName()
     {
-        return 'propel_model';
+        return 'model';
     }
 }

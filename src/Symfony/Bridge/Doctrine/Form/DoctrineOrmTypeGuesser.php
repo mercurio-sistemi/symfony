@@ -12,11 +12,13 @@
 namespace Symfony\Bridge\Doctrine\Form;
 
 use Doctrine\Common\Persistence\ManagerRegistry;
+use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\Common\Persistence\Mapping\MappingException;
+use Doctrine\ORM\Mapping\MappingException as LegacyMappingException;
 use Symfony\Component\Form\FormTypeGuesserInterface;
 use Symfony\Component\Form\Guess\Guess;
 use Symfony\Component\Form\Guess\TypeGuess;
 use Symfony\Component\Form\Guess\ValueGuess;
-use Doctrine\ORM\Mapping\MappingException;
 
 class DoctrineOrmTypeGuesser implements FormTypeGuesserInterface
 {
@@ -48,8 +50,7 @@ class DoctrineOrmTypeGuesser implements FormTypeGuesserInterface
             return new TypeGuess('entity', array('em' => $name, 'class' => $mapping['targetEntity'], 'multiple' => $multiple), Guess::HIGH_CONFIDENCE);
         }
 
-        switch ($metadata->getTypeOfField($property))
-        {
+        switch ($metadata->getTypeOfField($property)) {
             case 'array':
                 return new TypeGuess('collection', array(), Guess::MEDIUM_CONFIDENCE);
             case 'boolean':
@@ -83,14 +84,39 @@ class DoctrineOrmTypeGuesser implements FormTypeGuesserInterface
      */
     public function guessRequired($class, $property)
     {
-        $ret = $this->getMetadata($class);
-        if ($ret && $ret[0]->hasField($property)) {
-            if (!$ret[0]->isNullable($property)) {
+        $classMetadatas = $this->getMetadata($class);
+
+        if (!$classMetadatas) {
+            return null;
+        }
+
+        /* @var ClassMetadataInfo $classMetadata */
+        $classMetadata = $classMetadatas[0];
+
+        // Check whether the field exists and is nullable or not
+        if ($classMetadata->hasField($property)) {
+            if (!$classMetadata->isNullable($property)) {
                 return new ValueGuess(true, Guess::HIGH_CONFIDENCE);
             }
 
             return new ValueGuess(false, Guess::MEDIUM_CONFIDENCE);
         }
+
+        // Check whether the association exists, is a to-one association and its
+        // join column is nullable or not
+        if ($classMetadata->isAssociationWithSingleJoinColumn($property)) {
+            $mapping = $classMetadata->getAssociationMapping($property);
+
+            if (!isset($mapping['joinColumns'][0]['nullable'])) {
+                // The "nullable" option defaults to true, in that case the
+                // field should not be required.
+                return new ValueGuess(false, Guess::HIGH_CONFIDENCE);
+            }
+
+            return new ValueGuess(!$mapping['joinColumns'][0]['nullable'], Guess::HIGH_CONFIDENCE);
+        }
+
+        return null;
     }
 
     /**
@@ -146,6 +172,8 @@ class DoctrineOrmTypeGuesser implements FormTypeGuesserInterface
                 return $this->cache[$class] = array($em->getClassMetadata($class), $name);
             } catch (MappingException $e) {
                 // not an entity or mapped super class
+            } catch (LegacyMappingException $e) {
+                // not an entity or mapped super class, using Doctrine ORM 2.2
             }
         }
     }

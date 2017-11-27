@@ -13,6 +13,7 @@ namespace Symfony\Component\HttpKernel;
 
 use Symfony\Component\HttpKernel\Controller\ControllerResolverInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
@@ -55,10 +56,10 @@ class HttpKernel implements HttpKernelInterface, TerminableInterface
      * When $catch is true, the implementation must catch all exceptions
      * and do its best to convert them to a Response instance.
      *
-     * @param  Request $request A Request instance
-     * @param  integer $type    The type of the request
+     * @param Request $request A Request instance
+     * @param integer $type    The type of the request
      *                          (one of HttpKernelInterface::MASTER_REQUEST or HttpKernelInterface::SUB_REQUEST)
-     * @param  Boolean $catch   Whether to catch exceptions or not
+     * @param Boolean $catch Whether to catch exceptions or not
      *
      * @return Response A Response instance
      *
@@ -173,9 +174,9 @@ class HttpKernel implements HttpKernelInterface, TerminableInterface
     /**
      * Handles and exception by trying to convert it to a Response.
      *
-     * @param  \Exception $e       An \Exception instance
-     * @param  Request    $request A Request instance
-     * @param  integer    $type    The type of the request
+     * @param \Exception $e       An \Exception instance
+     * @param Request    $request A Request instance
+     * @param integer    $type    The type of the request
      *
      * @return Response A Response instance
      */
@@ -184,14 +185,35 @@ class HttpKernel implements HttpKernelInterface, TerminableInterface
         $event = new GetResponseForExceptionEvent($this, $request, $type, $e);
         $this->dispatcher->dispatch(KernelEvents::EXCEPTION, $event);
 
+        // a listener might have replaced the exception
+        $e = $event->getException();
+
         if (!$event->hasResponse()) {
             throw $e;
         }
 
+        $response = $event->getResponse();
+
+        // the developer asked for a specific status code
+        if ($response->headers->has('X-Status-Code')) {
+            $response->setStatusCode($response->headers->get('X-Status-Code'));
+
+            $response->headers->remove('X-Status-Code');
+        } elseif (!$response->isClientError() && !$response->isServerError() && !$response->isRedirect()) {
+            // ensure that we actually have an error response
+            if ($e instanceof HttpExceptionInterface) {
+                // keep the HTTP status code and headers
+                $response->setStatusCode($e->getStatusCode());
+                $response->headers->add($e->getHeaders());
+            } else {
+                $response->setStatusCode(500);
+            }
+        }
+
         try {
-            return $this->filterResponse($event->getResponse(), $request, $type);
+            return $this->filterResponse($response, $request, $type);
         } catch (\Exception $e) {
-            return $event->getResponse();
+            return $response;
         }
     }
 

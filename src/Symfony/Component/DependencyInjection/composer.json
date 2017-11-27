@@ -23,16 +23,12 @@
         "symfony/config": "2.1.*"
     },
     "suggest": {
-        "symfony/yaml": "self.version",
-        "symfony/config": "self.version"
+        "symfony/yaml": "2.1.*",
+        "symfony/config": "2.1.*"
     },
     "autoload": {
         "psr-0": { "Symfony\\Component\\DependencyInjection": "" }
     },
     "target-dir": "Symfony/Component/DependencyInjection",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "2.1-dev"
-        }
-    }
+    "minimum-stability": "dev"
 }

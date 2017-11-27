@@ -71,6 +71,18 @@ class ArgvInputTest extends \PHPUnit_Framework_TestCase
         $input->bind(new InputDefinition(array(new InputOption('foo', 'f', InputOption::VALUE_REQUIRED))));
         $this->assertEquals(array('foo' => 'bar'), $input->getOptions(), '->parse() parses short options with a required value (with a space separator)');
 
+        $input = new ArgvInput(array('cli.php', '-f', ''));
+        $input->bind(new InputDefinition(array(new InputOption('foo', 'f', InputOption::VALUE_OPTIONAL))));
+        $this->assertEquals(array('foo' => ''), $input->getOptions(), '->parse() parses short options with an optional empty value');
+
+        $input = new ArgvInput(array('cli.php', '-f', '', 'foo'));
+        $input->bind(new InputDefinition(array(new InputArgument('name'), new InputOption('foo', 'f', InputOption::VALUE_OPTIONAL))));
+        $this->assertEquals(array('foo' => ''), $input->getOptions(), '->parse() parses short options with an optional empty value followed by an argument');
+
+        $input = new ArgvInput(array('cli.php', '-f', '', '-b'));
+        $input->bind(new InputDefinition(array(new InputOption('foo', 'f', InputOption::VALUE_OPTIONAL), new InputOption('bar', 'b'))));
+        $this->assertEquals(array('foo' => '', 'bar' => true), $input->getOptions(), '->parse() parses short options with an optional empty value followed by an option');
+
         $input = new ArgvInput(array('cli.php', '-f', '-b', 'foo'));
         $input->bind(new InputDefinition(array(new InputArgument('name'), new InputOption('foo', 'f', InputOption::VALUE_OPTIONAL), new InputOption('bar', 'b'))));
         $this->assertEquals(array('foo' => null, 'bar' => true), $input->getOptions(), '->parse() parses short options with an optional value which is not present');
@@ -150,7 +162,22 @@ class ArgvInputTest extends \PHPUnit_Framework_TestCase
 
         $input = new ArgvInput(array('cli.php', '--name=foo', '--name=bar', '--name=baz'));
         $input->bind(new InputDefinition(array(new InputOption('name', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY))));
-        $this->assertEquals(array('name' => array('foo', 'bar', 'baz')), $input->getOptions());
+        $this->assertEquals(array('name' => array('foo', 'bar', 'baz')), $input->getOptions(), '->parse() parses array options ("--option=value" syntax)');
+
+        $input = new ArgvInput(array('cli.php', '--name', 'foo', '--name', 'bar', '--name', 'baz'));
+        $input->bind(new InputDefinition(array(new InputOption('name', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY))));
+        $this->assertEquals(array('name' => array('foo', 'bar', 'baz')), $input->getOptions(), '->parse() parses array options ("--option value" syntax)');
+
+        $input = new ArgvInput(array('cli.php', '--name=foo', '--name=bar', '--name='));
+        $input->bind(new InputDefinition(array(new InputOption('name', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY))));
+        $this->assertSame(array('name' => array('foo', 'bar', null)), $input->getOptions(), '->parse() parses empty array options as null ("--option=value" syntax)');
+
+        $input = new ArgvInput(array('cli.php', '--name', 'foo', '--name', 'bar', '--name', '--anotherOption'));
+        $input->bind(new InputDefinition(array(
+            new InputOption('name', null, InputOption::VALUE_OPTIONAL | InputOption::VALUE_IS_ARRAY),
+            new InputOption('anotherOption', null, InputOption::VALUE_NONE),
+        )));
+        $this->assertSame(array('name' => array('foo', 'bar', null), 'anotherOption' => true), $input->getOptions(), '->parse() parses empty array options as null ("--option value" syntax)');
 
         try {
             $input = new ArgvInput(array('cli.php', '-1'));

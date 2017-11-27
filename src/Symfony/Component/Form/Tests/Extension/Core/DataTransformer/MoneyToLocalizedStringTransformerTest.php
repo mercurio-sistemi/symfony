@@ -13,7 +13,6 @@ namespace Symfony\Component\Form\Tests\Extension\Core\DataTransformer;
 
 use Symfony\Component\Form\Extension\Core\DataTransformer\MoneyToLocalizedStringTransformer;
 
-
 class MoneyToLocalizedStringTransformerTest extends LocalizedTestCase
 {
     protected function setUp()
@@ -34,12 +33,12 @@ class MoneyToLocalizedStringTransformerTest extends LocalizedTestCase
     {
         $transformer = new MoneyToLocalizedStringTransformer(null, null, null, 100);
 
-        $this->setExpectedException('Symfony\Component\Form\Exception\UnexpectedTypeException');
+        $this->setExpectedException('Symfony\Component\Form\Exception\TransformationFailedException');
 
         $transformer->transform('abcd');
     }
 
-    public function testTransform_empty()
+    public function testTransformEmpty()
     {
         $transformer = new MoneyToLocalizedStringTransformer();
 
@@ -57,12 +56,12 @@ class MoneyToLocalizedStringTransformerTest extends LocalizedTestCase
     {
         $transformer = new MoneyToLocalizedStringTransformer(null, null, null, 100);
 
-        $this->setExpectedException('Symfony\Component\Form\Exception\UnexpectedTypeException');
+        $this->setExpectedException('Symfony\Component\Form\Exception\TransformationFailedException');
 
         $transformer->reverseTransform(12345);
     }
 
-    public function testReverseTransform_empty()
+    public function testReverseTransformEmpty()
     {
         $transformer = new MoneyToLocalizedStringTransformer();
 

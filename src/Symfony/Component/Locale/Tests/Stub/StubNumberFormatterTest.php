@@ -160,8 +160,9 @@ class StubNumberFormatterTest extends LocaleTestCase
      */
     public function testFormatCurrencyWithCurrencyStyleCostaRicanColonsRoundingStub($value, $currency, $symbol, $expected)
     {
+        $this->skipIfICUDataVersionNotDefined();
         $formatter = $this->getStubFormatterWithCurrencyStyle();
-        $this->assertEquals(sprintf($expected, '₡'), $formatter->formatCurrency($value, $currency));
+        $this->assertEquals(sprintf($expected, $symbol), $formatter->formatCurrency($value, $currency));
     }
 
     /**
@@ -177,7 +178,7 @@ class StubNumberFormatterTest extends LocaleTestCase
 
     public function formatCurrencyWithCurrencyStyleCostaRicanColonsRoundingProvider()
     {
-        $crc = $this->isIntlExtensionLoaded() && $this->isSameAsIcuVersion('4.8') ? 'CRC' : '₡';
+        $crc = $this->isIntlExtensionLoaded() && $this->isGreaterOrEqualThanIcuVersion('4.8') ? 'CRC' : '₡';
 
         return array(
             array(100, 'CRC', $crc, '%s100'),
@@ -191,8 +192,9 @@ class StubNumberFormatterTest extends LocaleTestCase
      */
     public function testFormatCurrencyWithCurrencyStyleBrazilianRealRoundingStub($value, $currency, $symbol, $expected)
     {
+        $this->skipIfICUDataVersionNotDefined();
         $formatter = $this->getStubFormatterWithCurrencyStyle();
-        $this->assertEquals(sprintf($expected, 'R'), $formatter->formatCurrency($value, $currency));
+        $this->assertEquals(sprintf($expected, $symbol), $formatter->formatCurrency($value, $currency));
     }
 
     /**
@@ -231,8 +233,9 @@ class StubNumberFormatterTest extends LocaleTestCase
      */
     public function testFormatCurrencyWithCurrencyStyleSwissRoundingStub($value, $currency, $symbol, $expected)
     {
+        $this->skipIfICUDataVersionNotDefined();
         $formatter = $this->getStubFormatterWithCurrencyStyle();
-        $this->assertEquals(sprintf($expected, 'CHF'), $formatter->formatCurrency($value, $currency));
+        $this->assertEquals(sprintf($expected, $symbol), $formatter->formatCurrency($value, $currency));
     }
 
     /**
@@ -245,7 +248,6 @@ class StubNumberFormatterTest extends LocaleTestCase
         $formatter = $this->getIntlFormatterWithCurrencyStyle();
         $this->assertEquals(sprintf($expected, $symbol), $formatter->formatCurrency($value, $currency));
     }
-
 
     public function formatCurrencyWithCurrencyStyleSwissRoundingProvider()
     {
@@ -858,10 +860,20 @@ class StubNumberFormatterTest extends LocaleTestCase
         $this->assertInternalType('integer', $parsedValue);
         $this->assertEquals(2147483647, $parsedValue);
 
-        // Look that the parsing of '-2,147,483,648' results in a float like the literal -2147483648
         $parsedValue = $formatter->parse('-2,147,483,648', \NumberFormatter::TYPE_INT64);
-        $this->assertInternalType('float', $parsedValue);
-        $this->assertEquals(((float) -2147483647 - 1), $parsedValue);
+
+        // Bug #59597 was fixed on PHP 5.3.14 and 5.4.4
+        // The negative PHP_INT_MAX was being converted to float
+        if (
+            (version_compare(PHP_VERSION, '5.4.0', '<') && version_compare(PHP_VERSION, '5.3.14', '>=')) ||
+            version_compare(PHP_VERSION, '5.4.4', '>=')
+        ) {
+            $this->assertInternalType('int', $parsedValue);
+        } else {
+            $this->assertInternalType('float', $parsedValue);
+        }
+
+        $this->assertEquals(-2147483648, $parsedValue);
     }
 
     public function testParseTypeInt64StubWith32BitIntegerInPhp64Bit()
@@ -909,11 +921,31 @@ class StubNumberFormatterTest extends LocaleTestCase
 
         $parsedValue = $formatter->parse('2,147,483,648', \NumberFormatter::TYPE_INT64);
         $this->assertInternalType('integer', $parsedValue);
-        $this->assertEquals(-2147483647 - 1, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range.');
+
+        // Bug #59597 was fixed on PHP 5.3.14 and 5.4.4
+        // A 32 bit integer was being generated instead of a 64 bit integer
+        if (
+            (version_compare(PHP_VERSION, '5.3.14', '<')) ||
+            (version_compare(PHP_VERSION, '5.4.0', '>=') && version_compare(PHP_VERSION, '5.4.4', '<'))
+        ) {
+            $this->assertEquals(-2147483648, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range (PHP < 5.3.14 and PHP < 5.4.4).');
+        } else {
+            $this->assertEquals(2147483648, $parsedValue, '->parse() TYPE_INT64 uses true 64 bit integers (PHP >= 5.3.14 and PHP >= 5.4.4).');
+        }
 
         $parsedValue = $formatter->parse('-2,147,483,649', \NumberFormatter::TYPE_INT64);
         $this->assertInternalType('integer', $parsedValue);
-        $this->assertEquals(2147483647, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range.');
+
+        // Bug #59597 was fixed on PHP 5.3.14 and 5.4.4
+        // A 32 bit integer was being generated instead of a 64 bit integer
+        if (
+            (version_compare(PHP_VERSION, '5.3.14', '<')) ||
+            (version_compare(PHP_VERSION, '5.4.0', '>=') && version_compare(PHP_VERSION, '5.4.4', '<'))
+        ) {
+            $this->assertEquals(2147483647, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range  (PHP < 5.3.14 and PHP < 5.4.4).');
+        } else {
+            $this->assertEquals(-2147483649, $parsedValue, '->parse() TYPE_INT64 uses true 64 bit integers (PHP >= 5.3.14 and PHP >= 5.4.4).');
+        }
     }
 
     // Intl Tests
@@ -929,10 +961,20 @@ class StubNumberFormatterTest extends LocaleTestCase
         $this->assertInternalType('integer', $parsedValue);
         $this->assertEquals(2147483647, $parsedValue);
 
-        // Look that the parsing of '-2,147,483,648' results in a float like the literal -2147483648
         $parsedValue = $formatter->parse('-2,147,483,648', \NumberFormatter::TYPE_INT64);
-        $this->assertInternalType('float', $parsedValue);
-        $this->assertEquals(((float) -2147483647 - 1), $parsedValue);
+
+        // Bug #59597 was fixed on PHP 5.3.14 and 5.4.4
+        // The negative PHP_INT_MAX was being converted to float.
+        if (
+            (version_compare(PHP_VERSION, '5.4.0', '<') && version_compare(PHP_VERSION, '5.3.14', '>=')) ||
+            version_compare(PHP_VERSION, '5.4.4', '>=')
+        ) {
+            $this->assertInternalType('int', $parsedValue);
+        } else {
+            $this->assertInternalType('float', $parsedValue);
+        }
+
+        $this->assertEquals(-2147483648, $parsedValue);
     }
 
     public function testParseTypeInt64IntlWith32BitIntegerInPhp64Bit()
@@ -983,11 +1025,31 @@ class StubNumberFormatterTest extends LocaleTestCase
 
         $parsedValue = $formatter->parse('2,147,483,648', \NumberFormatter::TYPE_INT64);
         $this->assertInternalType('integer', $parsedValue);
-        $this->assertEquals(-2147483647 - 1, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range.');
+
+        // Bug #59597 was fixed on PHP 5.3.14 and 5.4.4
+        // A 32 bit integer was being generated instead of a 64 bit integer
+        if (
+            (version_compare(PHP_VERSION, '5.3.14', '<')) ||
+            (version_compare(PHP_VERSION, '5.4.0', '>=') && version_compare(PHP_VERSION, '5.4.4', '<'))
+        ) {
+            $this->assertEquals(-2147483648, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range (PHP < 5.3.14 and PHP < 5.4.4).');
+        } else {
+            $this->assertEquals(2147483648, $parsedValue, '->parse() TYPE_INT64 uses true 64 bit integers (PHP >= 5.3.14 and PHP >= 5.4.4).');
+        }
 
         $parsedValue = $formatter->parse('-2,147,483,649', \NumberFormatter::TYPE_INT64);
         $this->assertInternalType('integer', $parsedValue);
-        $this->assertEquals(2147483647, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range.');
+
+        // Bug #59597 was fixed on PHP 5.3.14 and 5.4.4
+        // A 32 bit integer was being generated instead of a 64 bit integer
+        if (
+            (version_compare(PHP_VERSION, '5.3.14', '<')) ||
+            (version_compare(PHP_VERSION, '5.4.0', '>=') && version_compare(PHP_VERSION, '5.4.4', '<'))
+        ) {
+            $this->assertEquals(2147483647, $parsedValue, '->parse() TYPE_INT64 does not use true 64 bit integers, using only the 32 bit range  (PHP < 5.3.14 and PHP < 5.4.4).');
+        } else {
+            $this->assertEquals(-2147483649, $parsedValue, '->parse() TYPE_INT64 uses true 64 bit integers (PHP >= 5.3.14 and PHP >= 5.4.4).');
+        }
     }
 
     /**
@@ -1132,5 +1194,12 @@ class StubNumberFormatterTest extends LocaleTestCase
         $formatter->setSymbol(\NumberFormatter::CURRENCY_SYMBOL, 'SFD');
 
         return $formatter;
+    }
+
+    protected function skipIfICUDataVersionNotDefined()
+    {
+        if (!getenv('USE_INTL_ICU_DATA_VERSION')) {
+            $this->markTestSkipped('Please set environment variable USE_INTL_ICU_DATA_VERSION.');
+        }
     }
 }

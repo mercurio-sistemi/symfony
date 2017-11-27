@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Component\Tests\BrowserKit;
+namespace Symfony\Component\BrowserKit\Tests;
 
 use Symfony\Component\BrowserKit\Client;
 use Symfony\Component\BrowserKit\History;
@@ -205,6 +205,15 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(array('foo' => 'bar'), $client->getCookieJar()->allValues('http://www.example.com/foo/foobar'), '->request() updates the CookieJar');
     }
 
+    public function testRequestSecureCookies()
+    {
+        $client = new TestClient();
+        $client->setNextResponse(new Response('<html><a href="/foo">foo</a></html>', 200, array('Set-Cookie' => 'foo=bar; path=/; secure')));
+        $client->request('GET', 'https://www.example.com/foo/foobar');
+
+        $this->assertTrue($client->getCookieJar()->get('foo', '/', 'www.example.com')->isSecure());
+    }
+
     public function testClick()
     {
         if (!class_exists('Symfony\Component\DomCrawler\Crawler')) {
@@ -222,6 +231,25 @@ class ClientTest extends \PHPUnit_Framework_TestCase
         $client->click($crawler->filter('a')->link());
 
         $this->assertEquals('http://www.example.com/foo', $client->getRequest()->getUri(), '->click() clicks on links');
+    }
+
+    public function testClickForm()
+    {
+        if (!class_exists('Symfony\Component\DomCrawler\Crawler')) {
+            $this->markTestSkipped('The "DomCrawler" component is not available');
+        }
+
+        if (!class_exists('Symfony\Component\CssSelector\CssSelector')) {
+            $this->markTestSkipped('The "CssSelector" component is not available');
+        }
+
+        $client = new TestClient();
+        $client->setNextResponse(new Response('<html><form action="/foo"><input type="submit" /></form></html>'));
+        $crawler = $client->request('GET', 'http://www.example.com/foo/foobar');
+
+        $client->click($crawler->filter('input')->form());
+
+        $this->assertEquals('http://www.example.com/foo', $client->getRequest()->getUri(), '->click() Form submit forms');
     }
 
     public function testSubmit()

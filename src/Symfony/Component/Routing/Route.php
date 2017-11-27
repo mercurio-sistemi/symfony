@@ -18,7 +18,7 @@ namespace Symfony\Component\Routing;
  *
  * @api
  */
-class Route
+class Route implements \Serializable
 {
     private $pattern;
     private $defaults;
@@ -26,7 +26,7 @@ class Route
     private $options;
     private $compiled;
 
-    static private $compilers = array();
+    private static $compilers = array();
 
     /**
      * Constructor.
@@ -35,10 +35,10 @@ class Route
      *
      *  * compiler_class: A class name able to compile this route instance (RouteCompiler by default)
      *
-     * @param string $pattern       The pattern to match
-     * @param array  $defaults      An array of default parameter values
-     * @param array  $requirements  An array of requirements for parameters (regexes)
-     * @param array  $options       An array of options
+     * @param string $pattern      The pattern to match
+     * @param array  $defaults     An array of default parameter values
+     * @param array  $requirements An array of requirements for parameters (regexes)
+     * @param array  $options      An array of options
      *
      * @api
      */
@@ -53,6 +53,25 @@ class Route
     public function __clone()
     {
         $this->compiled = null;
+    }
+
+    public function serialize()
+    {
+        return serialize(array(
+            'pattern' => $this->pattern,
+            'defaults' => $this->defaults,
+            'requirements' => $this->requirements,
+            'options' => $this->options,
+        ));
+    }
+
+    public function unserialize($data)
+    {
+        $data = unserialize($data);
+        $this->pattern = $data['pattern'];
+        $this->defaults = $data['defaults'];
+        $this->requirements = $data['requirements'];
+        $this->options = $data['options'];
     }
 
     /**
@@ -76,13 +95,9 @@ class Route
      */
     public function setPattern($pattern)
     {
-        $this->pattern = trim($pattern);
-
-        // a route must start with a slash
-        if ('' === $this->pattern || '/' !== $this->pattern[0]) {
-            $this->pattern = '/'.$this->pattern;
-        }
-
+        // A pattern must start with a slash and must not have multiple slashes at the beginning because the
+        // generated path for this route would be confused with a network path, e.g. '//domain.com/path'.
+        $this->pattern = '/' . ltrim(trim($pattern), '/');
         $this->compiled = null;
 
         return $this;
@@ -128,7 +143,7 @@ class Route
     public function addOptions(array $options)
     {
         foreach ($options as $name => $option) {
-            $this->options[(string) $name] = $option;
+            $this->options[$name] = $option;
         }
         $this->compiled = null;
 
@@ -205,7 +220,7 @@ class Route
     public function addDefaults(array $defaults)
     {
         foreach ($defaults as $name => $default) {
-            $this->defaults[(string) $name] = $default;
+            $this->defaults[$name] = $default;
         }
         $this->compiled = null;
 
@@ -248,7 +263,7 @@ class Route
      */
     public function setDefault($name, $default)
     {
-        $this->defaults[(string) $name] = $default;
+        $this->defaults[$name] = $default;
         $this->compiled = null;
 
         return $this;
@@ -314,7 +329,7 @@ class Route
     /**
      * Sets a requirement for the given key.
      *
-     * @param string $key The key
+     * @param string $key   The key
      * @param string $regex The regex
      *
      * @return Route The current Route instance

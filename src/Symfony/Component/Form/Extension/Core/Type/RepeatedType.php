@@ -12,22 +12,27 @@
 namespace Symfony\Component\Form\Extension\Core\Type;
 
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\FormBuilder;
+use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\Extension\Core\DataTransformer\ValueToDuplicatesTransformer;
+use Symfony\Component\OptionsResolver\OptionsResolverInterface;
 
 class RepeatedType extends AbstractType
 {
     /**
      * {@inheritdoc}
      */
-    public function buildForm(FormBuilder $builder, array $options)
+    public function buildForm(FormBuilderInterface $builder, array $options)
     {
         // Overwrite required option for child fields
         $options['first_options']['required']  = $options['required'];
         $options['second_options']['required'] = $options['required'];
 
+        if (!isset($options['options']['error_bubbling'])) {
+            $options['options']['error_bubbling'] = $options['error_bubbling'];
+        }
+
         $builder
-            ->appendClientTransformer(new ValueToDuplicatesTransformer(array(
+            ->addViewTransformer(new ValueToDuplicatesTransformer(array(
                 $options['first_name'],
                 $options['second_name'],
             )))
@@ -39,9 +44,9 @@ class RepeatedType extends AbstractType
     /**
      * {@inheritdoc}
      */
-    public function getDefaultOptions()
+    public function setDefaultOptions(OptionsResolverInterface $resolver)
     {
-        return array(
+        $resolver->setDefaults(array(
             'type'           => 'text',
             'options'        => array(),
             'first_options'  => array(),
@@ -49,7 +54,7 @@ class RepeatedType extends AbstractType
             'first_name'     => 'first',
             'second_name'    => 'second',
             'error_bubbling' => false,
-        );
+        ));
     }
 
     /**

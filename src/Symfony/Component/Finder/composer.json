@@ -22,9 +22,5 @@
         "psr-0": { "Symfony\\Component\\Finder": "" }
     },
     "target-dir": "Symfony/Component/Finder",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "2.1-dev"
-        }
-    }
+    "minimum-stability": "dev"
 }

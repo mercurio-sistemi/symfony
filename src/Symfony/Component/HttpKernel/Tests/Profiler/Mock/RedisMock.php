@@ -29,11 +29,11 @@ class RedisMock
     }
 
     /**
-     * Add a memcached server to connection pool
+     * Add a server to connection pool
      *
-     * @param string $host
+     * @param string  $host
      * @param integer $port
-     * @param float $timeout
+     * @param float   $timeout
      *
      * @return boolean
      */
@@ -84,9 +84,9 @@ class RedisMock
     /**
      * Store data at the server with expiration time.
      *
-     * @param string $key
+     * @param string  $key
      * @param integer $ttl
-     * @param mixed $value
+     * @param mixed   $value
      *
      * @return boolean
      */
@@ -104,7 +104,7 @@ class RedisMock
     /**
      * Sets an expiration time on an item.
      *
-     * @param string $key
+     * @param string  $key
      * @param integer $ttl
      *
      * @return boolean
@@ -235,6 +235,19 @@ class RedisMock
     private function storeData($key, $value)
     {
         $this->storage[$key] = serialize($value);
+
+        return true;
+    }
+
+    public function select($dbnum)
+    {
+        if (!$this->connected) {
+            return false;
+        }
+
+        if (0 > $dbnum) {
+            return false;
+        }
 
         return true;
     }

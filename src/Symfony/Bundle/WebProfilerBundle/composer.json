@@ -17,15 +17,11 @@
     ],
     "require": {
         "php": ">=5.3.3",
-        "symfony/twig-bundle": "self.version"
+        "symfony/twig-bundle": "2.1.*"
     },
     "autoload": {
         "psr-0": { "Symfony\\Bundle\\WebProfilerBundle": "" }
     },
     "target-dir": "Symfony/Bundle/WebProfilerBundle",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "2.1-dev"
-        }
-    }
+    "minimum-stability": "dev"
 }

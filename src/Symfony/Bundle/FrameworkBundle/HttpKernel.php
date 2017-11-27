@@ -62,9 +62,9 @@ class HttpKernel extends BaseHttpKernel
     /**
      * Forwards the request to another controller.
      *
-     * @param  string  $controller The controller name (a string like BlogBundle:Post:index)
-     * @param  array   $attributes An array of request attributes
-     * @param  array   $query      An array of request query parameters
+     * @param string $controller The controller name (a string like BlogBundle:Post:index)
+     * @param array  $attributes An array of request attributes
+     * @param array  $query      An array of request query parameters
      *
      * @return Response A Response instance
      */
@@ -116,18 +116,30 @@ class HttpKernel extends BaseHttpKernel
         }
 
         if ($this->esiSupport && (true === $options['standalone'] || 'esi' === $options['standalone'])) {
-            $uri = $this->generateInternalUri($controller, $options['attributes'], $options['query']);
+            if (0 === strpos($controller, 'http://') || 0 === strpos($controller, 'https://')) {
+                $uri = $controller;
+            } else {
+                $uri = $this->generateInternalUri($controller, $options['attributes'], $options['query']);
+            }
 
             $alt = '';
             if ($options['alt']) {
-                $alt = $this->generateInternalUri($options['alt'][0], isset($options['alt'][1]) ? $options['alt'][1] : array(), isset($options['alt'][2]) ? $options['alt'][2] : array());
+                if (is_string($options['alt']) && (0 === strpos($options['alt'], 'http://') || 0 === strpos($options['alt'], 'https://'))) {
+                    $alt = $options['alt'];
+                } else {
+                    $alt = $this->generateInternalUri($options['alt'][0], isset($options['alt'][1]) ? $options['alt'][1] : array(), isset($options['alt'][2]) ? $options['alt'][2] : array());
+                }
             }
 
             return $this->container->get('esi')->renderIncludeTag($uri, $alt, $options['ignore_errors'], $options['comment']);
         }
 
         if ('js' === $options['standalone']) {
-            $uri = $this->generateInternalUri($controller, $options['attributes'], $options['query'], false);
+            if (0 === strpos($controller, 'http://') || 0 === strpos($controller, 'https://')) {
+                $uri = $controller;
+            } else {
+                $uri = $this->generateInternalUri($controller, $options['attributes'], $options['query'], false);
+            }
             $defaultContent = null;
 
             if ($template = $this->container->getParameter('templating.hinclude.default_template')) {
@@ -139,9 +151,14 @@ class HttpKernel extends BaseHttpKernel
 
         $request = $this->container->get('request');
 
-        // controller or URI?
-        if (0 === strpos($controller, '/')) {
-            $subRequest = Request::create($request->getUriForPath($controller), 'get', array(), $request->cookies->all(), array(), $request->server->all());
+        // controller or URI or path?
+        if (0 === strpos($controller, 'http://') || 0 === strpos($controller, 'https://')) {
+            $subRequest = $request::create($controller, 'get', array(), $request->cookies->all(), array(), $request->server->all());
+            if ($session = $request->getSession()) {
+                $subRequest->setSession($session);
+            }
+        } elseif (0 === strpos($controller, '/')) {
+            $subRequest = $request::create($request->getUriForPath($controller), 'get', array(), $request->cookies->all(), array(), $request->server->all());
             if ($session = $request->getSession()) {
                 $subRequest->setSession($session);
             }
@@ -196,9 +213,10 @@ class HttpKernel extends BaseHttpKernel
      *
      * This method uses the "_internal" route, which should be available.
      *
-     * @param string $controller A controller name to execute (a string like BlogBundle:Post:index), or a relative URI
-     * @param array  $attributes An array of request attributes
-     * @param array  $query      An array of request query parameters
+     * @param string  $controller A controller name to execute (a string like BlogBundle:Post:index), or a relative URI
+     * @param array   $attributes An array of request attributes
+     * @param array   $query      An array of request query parameters
+     * @param boolean $secure
      *
      * @return string An internal URI
      */
@@ -226,6 +244,7 @@ class HttpKernel extends BaseHttpKernel
      * Renders an HInclude tag.
      *
      * @param string $uri A URI
+     * @param string $defaultContent Default content
      */
     public function renderHIncludeTag($uri, $defaultContent = null)
     {

@@ -47,7 +47,9 @@ class XmlFileLoaderTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(1, count($routes), 'One route is loaded');
         $this->assertContainsOnly('Symfony\Component\Routing\Route', $routes);
+
         $route = $routes['blog_show'];
+        $this->assertSame(null, $route->getDefault('slug'));
         $this->assertEquals('RouteCompiler', $route->getOption('compiler_class'));
     }
 
@@ -87,5 +89,15 @@ class XmlFileLoaderTest extends \PHPUnit_Framework_TestCase
     public function getPathsToInvalidFiles()
     {
         return array(array('nonvalidnode.xml'), array('nonvalidroute.xml'), array('nonvalid.xml'));
+    }
+
+    /**
+     * @expectedException \InvalidArgumentException
+     * @expectedExceptionMessage Document types are not allowed.
+     */
+    public function testDocTypeIsNotAllowed()
+    {
+        $loader = new XmlFileLoader(new FileLocator(array(__DIR__.'/../Fixtures')));
+        $loader->load('withdoctype.xml');
     }
 }

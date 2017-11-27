@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace Symfony\Test\Component\Security\Http\Firewall;
+namespace Symfony\Component\Security\Tests\Http\Firewall;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -82,17 +82,11 @@ class ContextListenerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($session->has('_security_session'));
     }
 
-    protected function runSessionOnKernelResponse($newToken, $original = null)
+    public function testOnKernelResponseWithoutSession()
     {
-        $session = new Session(new MockArraySessionStorage());
-
-        if ($original !== null) {
-            $session->set('_security_session', $original);
-        }
-
-        $this->securityContext->setToken($newToken);
-
+        $this->securityContext->setToken(new UsernamePasswordToken('test1', 'pass1', 'phpunit'));
         $request = new Request();
+        $session = new Session(new MockArraySessionStorage());
         $request->setSession($session);
 
         $event = new FilterResponseEvent(
@@ -105,13 +99,14 @@ class ContextListenerTest extends \PHPUnit_Framework_TestCase
         $listener = new ContextListener($this->securityContext, array(), 'session');
         $listener->onKernelResponse($event);
 
-        return $session;
+        $this->assertTrue($session->isStarted());
     }
 
-    public function testOnKernelResponseWithoutSession()
+    public function testOnKernelResponseWithoutSessionNorToken()
     {
-        $this->securityContext->setToken(new UsernamePasswordToken('test1', 'pass1', 'phpunit'));
         $request = new Request();
+        $session = new Session(new MockArraySessionStorage());
+        $request->setSession($session);
 
         $event = new FilterResponseEvent(
             $this->getMock('Symfony\Component\HttpKernel\HttpKernelInterface'),
@@ -123,6 +118,75 @@ class ContextListenerTest extends \PHPUnit_Framework_TestCase
         $listener = new ContextListener($this->securityContext, array(), 'session');
         $listener->onKernelResponse($event);
 
-        $this->assertFalse($request->hasSession());
+        $this->assertFalse($session->isStarted());
     }
-}
+
+    /**
+     * @dataProvider provideInvalidToken
+     */
+    public function testInvalidTokenInSession($token)
+    {
+        $context = $this->getMock('Symfony\Component\Security\Core\SecurityContextInterface');
+        $event = $this->getMockBuilder('Symfony\Component\HttpKernel\Event\GetResponseEvent')
+            ->disableOriginalConstructor()
+            ->getMock();
+        $request = $this->getMock('Symfony\Component\HttpFoundation\Request');
+        $session = $this->getMockBuilder('Symfony\Component\HttpFoundation\Session\Session')
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $event->expects($this->any())
+            ->method('getRequest')
+            ->will($this->returnValue($request));
+        $request->expects($this->any())
+            ->method('hasPreviousSession')
+            ->will($this->returnValue(true));
+        $request->expects($this->any())
+            ->method('getSession')
+            ->will($this->returnValue($session));
+        $session->expects($this->any())
+            ->method('get')
+            ->with('_security_key123')
+            ->will($this->returnValue(serialize($token)));
+        $context->expects($this->once())
+            ->method('setToken')
+            ->with(null);
+
+        $listener = new ContextListener($context, array(), 'key123');
+        $listener->handle($event);
+    }
+
+    public function provideInvalidToken()
+    {
+        return array(
+            array(new \__PHP_Incomplete_Class()),
+            array(null),
+        );
+    }
+
+    protected function runSessionOnKernelResponse($newToken, $original = null)
+    {
+        $session = new Session(new MockArraySessionStorage());
+
+        if ($original !== null) {
+            $session->set('_security_session', $original);
+        }
+
+        $this->securityContext->setToken($newToken);
+
+        $request = new Request();
+        $request->setSession($session);
+        $request->cookies->set('MOCKSESSID', true);
+
+        $event = new FilterResponseEvent(
+            $this->getMock('Symfony\Component\HttpKernel\HttpKernelInterface'),
+            $request,
+            HttpKernelInterface::MASTER_REQUEST,
+            new Response()
+        );
+
+        $listener = new ContextListener($this->securityContext, array(), 'session');
+        $listener->onKernelResponse($event);
+
+        return $session;
+    }}

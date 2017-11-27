@@ -14,6 +14,11 @@ namespace Symfony\Component\Locale;
 class Locale extends \Locale
 {
     /**
+     * The ICU data version that ships with Symfony
+     */
+    const ICU_DATA_VERSION = '49';
+
+    /**
      * Caches the countries in different locales
      * @var array
      */
@@ -34,19 +39,19 @@ class Locale extends \Locale
     /**
      * Returns the country names for a locale
      *
-     * @param  string $locale     The locale to use for the country names
+     * @param string $locale The locale to use for the country names
      *
      * @return array              The country names with their codes as keys
      *
      * @throws RuntimeException   When the resource bundles cannot be loaded
      */
-    static public function getDisplayCountries($locale)
+    public static function getDisplayCountries($locale)
     {
         if (!isset(self::$countries[$locale])) {
-            $bundle = \ResourceBundle::create($locale, __DIR__.'/Resources/data/region');
+            $bundle = \ResourceBundle::create($locale, self::getIcuDataDirectory().'/region');
 
             if (null === $bundle) {
-                throw new \RuntimeException('The country resource bundle could not be loaded');
+                throw new \RuntimeException(sprintf('The country resource bundle could not be loaded for locale "%s"', $locale));
             }
 
             $collator = new \Collator($locale);
@@ -81,7 +86,7 @@ class Locale extends \Locale
      * @return array              The country codes
      * @throws RuntimeException   When the resource bundles cannot be loaded
      */
-    static public function getCountries()
+    public static function getCountries()
     {
         return array_keys(self::getDisplayCountries(self::getDefault()));
     }
@@ -89,19 +94,19 @@ class Locale extends \Locale
     /**
      * Returns the language names for a locale
      *
-     * @param  string $locale     The locale to use for the language names
+     * @param string $locale The locale to use for the language names
      *
      * @return array              The language names with their codes as keys
      *
      * @throws RuntimeException   When the resource bundles cannot be loaded
      */
-    static public function getDisplayLanguages($locale)
+    public static function getDisplayLanguages($locale)
     {
         if (!isset(self::$languages[$locale])) {
-            $bundle = \ResourceBundle::create($locale, __DIR__.'/Resources/data/lang');
+            $bundle = \ResourceBundle::create($locale, self::getIcuDataDirectory().'/lang');
 
             if (null === $bundle) {
-                throw new \RuntimeException('The language resource bundle could not be loaded');
+                throw new \RuntimeException(sprintf('The language resource bundle could not be loaded for locale "%s"', $locale));
             }
 
             $collator = new \Collator($locale);
@@ -134,7 +139,7 @@ class Locale extends \Locale
      * @return array              The language codes
      * @throws RuntimeException   When the resource bundles cannot be loaded
      */
-    static public function getLanguages()
+    public static function getLanguages()
     {
         return array_keys(self::getDisplayLanguages(self::getDefault()));
     }
@@ -142,17 +147,17 @@ class Locale extends \Locale
     /**
      * Returns the locale names for a locale
      *
-     * @param  string $locale     The locale to use for the locale names
+     * @param string $locale The locale to use for the locale names
      * @return array              The locale names with their codes as keys
      * @throws RuntimeException   When the resource bundles cannot be loaded
      */
-    static public function getDisplayLocales($locale)
+    public static function getDisplayLocales($locale)
     {
         if (!isset(self::$locales[$locale])) {
-            $bundle = \ResourceBundle::create($locale, __DIR__.'/Resources/data/names');
+            $bundle = \ResourceBundle::create($locale, self::getIcuDataDirectory().'/names');
 
             if (null === $bundle) {
-                throw new \RuntimeException('The locale resource bundle could not be loaded');
+                throw new \RuntimeException(sprintf('The locale resource bundle could not be loaded for locale "%s"', $locale));
             }
 
             $collator = new \Collator($locale);
@@ -182,17 +187,17 @@ class Locale extends \Locale
      * @return array              The locale codes
      * @throws RuntimeException   When the resource bundles cannot be loaded
      */
-    static public function getLocales()
+    public static function getLocales()
     {
         return array_keys(self::getDisplayLocales(self::getDefault()));
     }
 
     /**
-     * Returns the ICU version
+     * Returns the ICU version as defined by the intl extension
      *
      * @return string|null The ICU version
      */
-    static public function getIcuVersion()
+    public static function getIntlIcuVersion()
     {
         if (defined('INTL_ICU_VERSION')) {
             return INTL_ICU_VERSION;
@@ -213,11 +218,11 @@ class Locale extends \Locale
     }
 
     /**
-     * Returns the ICU Data version
+     * Returns the ICU Data version as defined by the intl extension
      *
      * @return string|null The ICU Data version
      */
-    static public function getIcuDataVersion()
+    public static function getIntlIcuDataVersion()
     {
         if (defined('INTL_ICU_DATA_VERSION')) {
             return INTL_ICU_DATA_VERSION;
@@ -238,19 +243,50 @@ class Locale extends \Locale
     }
 
     /**
+     * Returns the ICU data version that ships with Symfony. If the environment variable USE_INTL_ICU_DATA_VERSION is
+     * defined, it will try use the ICU data version as defined by the intl extension, if available.
+     *
+     * @return string The ICU data version that ships with Symfony
+     */
+    public static function getIcuDataVersion()
+    {
+        static $dataVersion;
+
+        if (null === $dataVersion) {
+            $dataVersion = self::ICU_DATA_VERSION;
+
+            if (getenv('USE_INTL_ICU_DATA_VERSION') && self::getIntlIcuVersion()) {
+                $dataVersion = self::getIntlIcuVersion();
+
+                preg_match('/^(?P<version>[0-9]\.[0-9]|[0-9]{2,})/', $dataVersion, $matches);
+
+                $dataVersion = $matches['version'];
+            }
+        }
+
+        return $dataVersion;
+    }
+
+    /**
+     * Returns the directory path of the ICU data that ships with Symfony
+     *
+     * @return string The path to the ICU data directory
+     */
+    public static function getIcuDataDirectory()
+    {
+        return __DIR__.'/Resources/data/'.self::getIcuDataVersion();
+    }
+
+    /**
      * Returns the fallback locale for a given locale, if any
      *
      * @param $locale             The locale to find the fallback for
      * @return string|null        The fallback locale, or null if no parent exists
      */
-    static protected function getFallbackLocale($locale)
+    protected static function getFallbackLocale($locale)
     {
-        if ($locale === self::getDefault()) {
-            return null;
-        }
-
         if (false === $pos = strrpos($locale, '_')) {
-            return self::getDefault();
+            return null;
         }
 
         return substr($locale, 0, $pos);

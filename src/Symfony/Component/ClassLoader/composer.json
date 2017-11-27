@@ -15,6 +15,7 @@
             "homepage": "http://symfony.com/contributors"
         }
     ],
+    "minimum-stability": "dev",
     "require": {
         "php": ">=5.3.3"
     },
@@ -25,9 +26,5 @@
         "psr-0": { "Symfony\\Component\\ClassLoader": "" }
     },
     "target-dir": "Symfony/Component/ClassLoader",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "2.1-dev"
-        }
-    }
+    "minimum-stability": "dev"
 }

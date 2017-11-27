@@ -11,10 +11,12 @@
 
 namespace Symfony\Component\Form;
 
+use Symfony\Component\Form\Exception\TransformationFailedException;
+
 /**
  * Transforms a value between different representations.
  *
- * @author     Bernhard Schussek <bernhard.schussek@symfony.com>
+ * @author Bernhard Schussek <bschussek@gmail.com>
  */
 interface DataTransformerInterface
 {
@@ -39,14 +41,13 @@ interface DataTransformerInterface
      * By convention, transform() should return an empty string if NULL is
      * passed.
      *
-     * @param  mixed $value              The value in the original representation
+     * @param mixed $value The value in the original representation
      *
-     * @return mixed                     The value in the transformed representation
+     * @return mixed The value in the transformed representation
      *
-     * @throws UnexpectedTypeException   when the argument is not a string
-     * @throws TransformationFailedException  when the transformation fails
+     * @throws TransformationFailedException When the transformation fails.
      */
-    function transform($value);
+    public function transform($value);
 
     /**
      * Transforms a value from the transformed representation to its original
@@ -66,12 +67,11 @@ interface DataTransformerInterface
      * By convention, reverseTransform() should return NULL if an empty string
      * is passed.
      *
-     * @param  mixed $value              The value in the transformed representation
+     * @param mixed $value The value in the transformed representation
      *
-     * @return mixed                     The value in the original representation
+     * @return mixed The value in the original representation
      *
-     * @throws UnexpectedTypeException   when the argument is not of the expected type
-     * @throws TransformationFailedException  when the transformation fails
+     * @throws TransformationFailedException When the transformation fails.
      */
-    function reverseTransform($value);
+    public function reverseTransform($value);
 }

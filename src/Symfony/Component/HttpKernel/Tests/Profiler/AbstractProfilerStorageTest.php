@@ -183,6 +183,21 @@ abstract class AbstractProfilerStorageTest extends \PHPUnit_Framework_TestCase
         $this->getStorage()->purge();
     }
 
+    public function testRetrieveByMethodAndLimit()
+    {
+        foreach (array('POST', 'GET') as $method) {
+            for ($i = 0; $i < 5; $i++) {
+                $profile = new Profile('token_'.$i.$method);
+                $profile->setMethod($method);
+                $this->getStorage()->write($profile);
+            }
+        }
+
+        $this->assertCount(5, $this->getStorage()->find('', '', 5, 'POST'));
+
+        $this->getStorage()->purge();
+    }
+
     public function testPurge()
     {
         $profile = new Profile('token1');
@@ -207,6 +222,22 @@ abstract class AbstractProfilerStorageTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEmpty($this->getStorage()->read('token'), '->purge() removes all data stored by profiler');
         $this->assertCount(0, $this->getStorage()->find('127.0.0.1', '', 10, 'GET'), '->purge() removes all items from index');
+    }
+
+    public function testDuplicates()
+    {
+        for ($i = 1; $i <= 5; $i++) {
+            $profile = new Profile('foo' . $i);
+            $profile->setIp('127.0.0.1');
+            $profile->setUrl('http://example.net/');
+            $profile->setMethod('GET');
+
+            ///three duplicates
+            $this->getStorage()->write($profile);
+            $this->getStorage()->write($profile);
+            $this->getStorage()->write($profile);
+        }
+        $this->assertCount(3, $this->getStorage()->find('127.0.0.1', 'http://example.net/', 3, 'GET'), '->find() method returns incorrect number of entries');
     }
 
     /**

@@ -11,6 +11,11 @@
          syntaxCheck="false"
          bootstrap="autoload.php.dist"
 >
+    <php>
+        <ini name="intl.default_locale" value="en"/>
+        <ini name="intl.error_level" value="0"/>
+    </php>
+
     <testsuites>
         <testsuite name="Symfony Test Suite">
             <directory>./src/Symfony/Bridge/*/Tests/</directory>

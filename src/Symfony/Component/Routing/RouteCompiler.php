@@ -21,11 +21,7 @@ class RouteCompiler implements RouteCompilerInterface
     const REGEX_DELIMITER = '#';
 
     /**
-     * Compiles the current route instance.
-     *
-     * @param Route $route A Route instance
-     *
-     * @return CompiledRoute A CompiledRoute instance
+     * {@inheritDoc}
      *
      * @throws \LogicException If a variable is referenced more than once
      */
@@ -72,7 +68,7 @@ class RouteCompiler implements RouteCompilerInterface
         }
 
         // find the first optional token
-        $firstOptional = INF;
+        $firstOptional = PHP_INT_MAX;
         for ($i = count($tokens) - 1; $i >= 0; $i--) {
             $token = $tokens[$i];
             if ('variable' === $token[0] && $route->hasDefault($token[3])) {
@@ -89,7 +85,6 @@ class RouteCompiler implements RouteCompilerInterface
         }
 
         return new CompiledRoute(
-            $route,
             'text' === $tokens[0][0] ? $tokens[0][1] : '',
             self::REGEX_DELIMITER.'^'.$regexp.'$'.self::REGEX_DELIMITER.'s',
             array_reverse($tokens),
@@ -109,16 +104,16 @@ class RouteCompiler implements RouteCompilerInterface
     private function computeRegexp(array $tokens, $index, $firstOptional)
     {
         $token = $tokens[$index];
-        if('text' === $token[0]) {
+        if ('text' === $token[0]) {
             // Text tokens
             return preg_quote($token[1], self::REGEX_DELIMITER);
         } else {
             // Variable tokens
-            if (0 === $index && 0 === $firstOptional && 1 == count($tokens)) {
+            if (0 === $index && 0 === $firstOptional) {
                 // When the only token is an optional variable token, the separator is required
-                return sprintf('%s(?<%s>%s)?', preg_quote($token[1], self::REGEX_DELIMITER), $token[3], $token[2]);
+                return sprintf('%s(?P<%s>%s)?', preg_quote($token[1], self::REGEX_DELIMITER), $token[3], $token[2]);
             } else {
-                $regexp = sprintf('%s(?<%s>%s)', preg_quote($token[1], self::REGEX_DELIMITER), $token[3], $token[2]);
+                $regexp = sprintf('%s(?P<%s>%s)', preg_quote($token[1], self::REGEX_DELIMITER), $token[3], $token[2]);
                 if ($index >= $firstOptional) {
                     // Enclose each optional token in a subpattern to make it optional.
                     // "?:" means it is non-capturing, i.e. the portion of the subject string that
@@ -127,7 +122,7 @@ class RouteCompiler implements RouteCompilerInterface
                     $nbTokens = count($tokens);
                     if ($nbTokens - 1 == $index) {
                         // Close the optional subpatterns
-                        $regexp .= str_repeat(")?", $nbTokens - $firstOptional);
+                        $regexp .= str_repeat(")?", $nbTokens - $firstOptional - (0 === $firstOptional ? 1 : 0));
                     }
                 }
 

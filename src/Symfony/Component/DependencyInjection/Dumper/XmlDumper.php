@@ -35,7 +35,7 @@ class XmlDumper extends Dumper
     /**
      * Dumps the service container as an XML string.
      *
-     * @param  array  $options An array of options
+     * @param array $options An array of options
      *
      * @return string An xml string representing of the service container
      *
@@ -63,7 +63,7 @@ class XmlDumper extends Dumper
     /**
      * Adds parameters.
      *
-     * @param DOMElement $parent
+     * @param \DOMElement $parent
      */
     private function addParameters(\DOMElement $parent)
     {
@@ -84,8 +84,8 @@ class XmlDumper extends Dumper
     /**
      * Adds method calls.
      *
-     * @param array $methodcalls
-     * @param DOMElement $parent
+     * @param array       $methodcalls
+     * @param \DOMElement $parent
      */
     private function addMethodCalls(array $methodcalls, \DOMElement $parent)
     {
@@ -102,9 +102,9 @@ class XmlDumper extends Dumper
     /**
      * Adds a service.
      *
-     * @param Definition $definition
-     * @param string $id
-     * @param DOMElement $parent
+     * @param Definition  $definition
+     * @param string      $id
+     * @param \DOMElement $parent
      */
     private function addService($definition, $id, \DOMElement $parent)
     {
@@ -172,9 +172,9 @@ class XmlDumper extends Dumper
     /**
      * Adds a service alias.
      *
-     * @param string $alias
-     * @param string $id
-     * @param DOMElement $parent
+     * @param string      $alias
+     * @param string      $id
+     * @param \DOMElement $parent
      */
     private function addServiceAlias($alias, $id, \DOMElement $parent)
     {
@@ -190,7 +190,7 @@ class XmlDumper extends Dumper
     /**
      * Adds services.
      *
-     * @param DOMElement $parent
+     * @param \DOMElement $parent
      */
     private function addServices(\DOMElement $parent)
     {
@@ -213,10 +213,10 @@ class XmlDumper extends Dumper
     /**
      * Converts parameters.
      *
-     * @param array      $parameters
-     * @param string     $type
-     * @param DOMElement $parent
-     * @param string     $keyAttribute
+     * @param array       $parameters
+     * @param string      $type
+     * @param \DOMElement $parent
+     * @param string      $keyAttribute
      */
     private function convertParameters($parameters, $type, \DOMElement $parent, $keyAttribute = 'key')
     {
@@ -280,8 +280,12 @@ class XmlDumper extends Dumper
      * Converts php types to xml types.
      *
      * @param mixed $value Value to convert
+     *
+     * @return string
+     *
+     * @throws RuntimeException When trying to dump object or resource
      */
-    static public function phpToXml($value)
+    public static function phpToXml($value)
     {
         switch (true) {
             case null === $value:

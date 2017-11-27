@@ -84,7 +84,7 @@ class ParameterBag implements ParameterBagInterface
      *
      * @return mixed  The parameter value
      *
-     * @throws  ParameterNotFoundException if the parameter is not defined
+     * @throws ParameterNotFoundException if the parameter is not defined
      *
      * @api
      */
@@ -115,7 +115,7 @@ class ParameterBag implements ParameterBagInterface
     /**
      * Returns true if a parameter name is defined.
      *
-     * @param  string  $name       The parameter name
+     * @param string $name The parameter name
      *
      * @return Boolean true if the parameter name is defined, false otherwise
      *
@@ -129,13 +129,13 @@ class ParameterBag implements ParameterBagInterface
     /**
      * Removes a parameter.
      *
-     * @param string $key The key
+     * @param string $name The parameter name
      *
      * @api
      */
-    public function remove($key)
+    public function remove($name)
     {
-        unset($this->parameters[$key]);
+        unset($this->parameters[strtolower($name)]);
     }
 
     /**
@@ -166,7 +166,7 @@ class ParameterBag implements ParameterBagInterface
     /**
      * Replaces parameter placeholders (%name%) by their values.
      *
-     * @param mixed $value A value
+     * @param mixed $value     A value
      * @param array $resolving An array of keys that are being resolved (used internally to detect circular references)
      *
      * @return mixed The resolved value
@@ -253,7 +253,28 @@ class ParameterBag implements ParameterBagInterface
         return $this->resolved;
     }
 
-    private function unescapeValue($value)
+    /**
+     * {@inheritDoc}
+     */
+    public function escapeValue($value)
+    {
+        if (is_string($value)) {
+            return str_replace('%', '%%', $value);
+        }
+
+        if (is_array($value)) {
+            $result = array();
+            foreach ($value as $k => $v) {
+                $result[$k] = $this->escapeValue($v);
+            }
+
+            return $result;
+        }
+
+        return $value;
+    }
+
+    public function unescapeValue($value)
     {
         if (is_string($value)) {
             return str_replace('%%', '%', $value);

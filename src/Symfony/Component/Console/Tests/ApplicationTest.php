@@ -21,15 +21,16 @@ use Symfony\Component\Console\Tester\ApplicationTester;
 
 class ApplicationTest extends \PHPUnit_Framework_TestCase
 {
-    static protected $fixturesPath;
+    protected static $fixturesPath;
 
-    static public function setUpBeforeClass()
+    public static function setUpBeforeClass()
     {
         self::$fixturesPath = realpath(__DIR__.'/Fixtures/');
         require_once self::$fixturesPath.'/FooCommand.php';
         require_once self::$fixturesPath.'/Foo1Command.php';
         require_once self::$fixturesPath.'/Foo2Command.php';
         require_once self::$fixturesPath.'/Foo3Command.php';
+        require_once self::$fixturesPath.'/Foo4Command.php';
     }
 
     protected function normalizeLineBreaks($text)
@@ -215,6 +216,64 @@ class ApplicationTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    public function testFindAlternativeExceptionMessage()
+    {
+        $application = new Application();
+        $application->add(new \FooCommand());
+
+        // Command + singular
+        try {
+            $application->find('foo:baR');
+            $this->fail('->find() throws an \InvalidArgumentException if command does not exist, with one alternative');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf('\InvalidArgumentException', $e, '->find() throws an \InvalidArgumentException if command does not exist, with one alternative');
+            $this->assertRegExp('/Did you mean this/', $e->getMessage(), '->find() throws an \InvalidArgumentException if command does not exist, with one alternative');
+        }
+
+        // Namespace + singular
+        try {
+            $application->find('foO:bar');
+            $this->fail('->find() throws an \InvalidArgumentException if command does not exist, with one alternative');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf('\InvalidArgumentException', $e, '->find() throws an \InvalidArgumentException if command does not exist, with one alternative');
+            $this->assertRegExp('/Did you mean this/', $e->getMessage(), '->find() throws an \InvalidArgumentException if command does not exist, with one alternative');
+        }
+
+        $application->add(new \Foo1Command());
+        $application->add(new \Foo2Command());
+
+        // Command + plural
+        try {
+            $application->find('foo:baR');
+            $this->fail('->find() throws an \InvalidArgumentException if command does not exist, with alternatives');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf('\InvalidArgumentException', $e, '->find() throws an \InvalidArgumentException if command does not exist, with alternatives');
+            $this->assertRegExp('/Did you mean one of these/', $e->getMessage(), '->find() throws an \InvalidArgumentException if command does not exist, with alternatives');
+        }
+
+        // Namespace + plural
+        try {
+            $application->find('foo2:bar');
+            $this->fail('->find() throws an \InvalidArgumentException if command does not exist, with alternatives');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf('\InvalidArgumentException', $e, '->find() throws an \InvalidArgumentException if command does not exist, with alternatives');
+            $this->assertRegExp('/Did you mean one of these/', $e->getMessage(), '->find() throws an \InvalidArgumentException if command does not exist, with alternatives');
+        }
+
+        $application->add(new \Foo3Command());
+        $application->add(new \Foo4Command());
+
+        // Subnamespace + plural
+        try {
+            $a = $application->find('foo3:');
+            $this->fail('->find() should throw an \InvalidArgumentException if a command is ambiguous because of a subnamespace, with alternatives');
+        } catch (\Exception $e) {
+            $this->assertInstanceOf('\InvalidArgumentException', $e);
+            $this->assertRegExp('/foo3:bar/', $e->getMessage());
+            $this->assertRegExp('/foo3:bar:toh/', $e->getMessage());
+        }
+    }
+
     public function testFindAlternativeCommands()
     {
         $application = new Application();
@@ -224,7 +283,7 @@ class ApplicationTest extends \PHPUnit_Framework_TestCase
         $application->add(new \Foo2Command());
 
         try {
-            $application->find($commandName = 'Unknow command');
+            $application->find($commandName = 'Unknown command');
             $this->fail('->find() throws an \InvalidArgumentException if command does not exist');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\InvalidArgumentException', $e, '->find() throws an \InvalidArgumentException if command does not exist');
@@ -264,11 +323,11 @@ class ApplicationTest extends \PHPUnit_Framework_TestCase
         $application->add(new \foo3Command());
 
         try {
-            $application->find('Unknow-namespace:Unknow-command');
+            $application->find('Unknown-namespace:Unknown-command');
             $this->fail('->find() throws an \InvalidArgumentException if namespace does not exist');
         } catch (\Exception $e) {
             $this->assertInstanceOf('\InvalidArgumentException', $e, '->find() throws an \InvalidArgumentException if namespace does not exist');
-            $this->assertEquals('There are no commands defined in the "Unknow-namespace" namespace.', $e->getMessage(), '->find() throws an \InvalidArgumentException if namespace does not exist, without alternatives');
+            $this->assertEquals('There are no commands defined in the "Unknown-namespace" namespace.', $e->getMessage(), '->find() throws an \InvalidArgumentException if namespace does not exist, without alternatives');
         }
 
         try {
@@ -281,6 +340,16 @@ class ApplicationTest extends \PHPUnit_Framework_TestCase
             $this->assertRegExp('/foo1/', $e->getMessage(), '->find() throws an \InvalidArgumentException if namespace does not exist, with alternative : "foo1"');
             $this->assertRegExp('/foo3/', $e->getMessage(), '->find() throws an \InvalidArgumentException if namespace does not exist, with alternative : "foo3"');
         }
+    }
+
+    public function testFindNamespaceDoesNotFailOnDeepSimilarNamespaces()
+    {
+        $application = $this->getMock('Symfony\Component\Console\Application', array('getNamespaces'));
+        $application->expects($this->once())
+            ->method('getNamespaces')
+            ->will($this->returnValue(array('foo:sublong', 'bar:sub')));
+
+        $this->assertEquals('foo:sublong', $application->findNamespace('f:sub'));
     }
 
     public function testSetCatchExceptions()
@@ -346,13 +415,6 @@ class ApplicationTest extends \PHPUnit_Framework_TestCase
         $tester = new ApplicationTester($application);
         $tester->run(array('command' => 'foo3:bar'), array('decorated' => false));
         $this->assertStringEqualsFile(self::$fixturesPath.'/application_renderexception3.txt', $this->normalizeLineBreaks($tester->getDisplay()), '->renderException() renders a pretty exceptions with previous exceptions');
-
-        $application = $this->getMock('Symfony\Component\Console\Application', array('getTerminalWidth'));
-        $application->setAutoExit(false);
-        $application->expects($this->any())
-            ->method('getTerminalWidth')
-            ->will($this->returnValue(32));
-        $tester = new ApplicationTester($application);
 
         $application = $this->getMock('Symfony\Component\Console\Application', array('getTerminalWidth'));
         $application->setAutoExit(false);
@@ -437,6 +499,36 @@ class ApplicationTest extends \PHPUnit_Framework_TestCase
 
         $tester->run(array('command' => 'foo:bar', '-n' => true), array('decorated' => false));
         $this->assertSame('called'.PHP_EOL, $tester->getDisplay(), '->run() does not call interact() if -n is passed');
+    }
+
+    public function testRunReturnsIntegerExitCode()
+    {
+        $exception = new \Exception('', 4);
+
+        $application = $this->getMock('Symfony\Component\Console\Application', array('doRun'));
+        $application->setAutoExit(false);
+        $application->expects($this->once())
+             ->method('doRun')
+             ->will($this->throwException($exception));
+
+        $exitCode = $application->run(new ArrayInput(array()), new NullOutput());
+
+        $this->assertSame(4, $exitCode, '->run() returns integer exit code extracted from raised exception');
+    }
+
+    public function testRunReturnsExitCodeOneForExceptionCodeZero()
+    {
+        $exception = new \Exception('', 0);
+
+        $application = $this->getMock('Symfony\Component\Console\Application', array('doRun'));
+        $application->setAutoExit(false);
+        $application->expects($this->once())
+             ->method('doRun')
+             ->will($this->throwException($exception));
+
+        $exitCode = $application->run(new ArrayInput(array()), new NullOutput());
+
+        $this->assertSame(1, $exitCode, '->run() returns exit code 1 when exception code is 0');
     }
 
     /**

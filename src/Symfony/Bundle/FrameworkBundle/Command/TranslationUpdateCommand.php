@@ -14,7 +14,6 @@ namespace Symfony\Bundle\FrameworkBundle\Command;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Finder\Finder;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Translation\MessageCatalogue;
@@ -83,7 +82,7 @@ EOF
         if ($input->getOption('force') !== true && $input->getOption('dump-messages') !== true) {
             $output->writeln('<info>You must choose one of --force or --dump-messages</info>');
 
-            return;
+            return 1;
         }
 
         // check format
@@ -93,7 +92,7 @@ EOF
             $output->writeln('<error>Wrong output format</error>');
             $output->writeln('Supported formats are '.implode(', ', $supportedFormats).'.');
 
-            return;
+            return 1;
         }
 
         // get bundle directory
@@ -122,7 +121,7 @@ EOF
                 $output->writeln(Yaml::dump($catalogue->all($domain), 10));
             }
             if ($input->getOption('output-format') == 'xliff') {
-                $output->writeln('Xliff output version is <info>1.2/info>');
+                $output->writeln('Xliff output version is <info>1.2</info>');
             }
         }
 

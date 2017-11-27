@@ -47,11 +47,11 @@ abstract class AbstractPreAuthenticatedListener implements ListenerInterface
     }
 
     /**
-     * Handles X509 authentication.
+     * Handles pre-authentication.
      *
      * @param GetResponseEvent $event A GetResponseEvent instance
      */
-    public final function handle(GetResponseEvent $event)
+    final public function handle(GetResponseEvent $event)
     {
         $request = $event->getRequest();
 
@@ -62,7 +62,7 @@ abstract class AbstractPreAuthenticatedListener implements ListenerInterface
         list($user, $credentials) = $this->getPreAuthenticatedData($request);
 
         if (null !== $token = $this->securityContext->getToken()) {
-            if ($token instanceof PreAuthenticatedToken && $token->isAuthenticated() && $token->getUsername() === $user) {
+            if ($token instanceof PreAuthenticatedToken && $this->providerKey == $token->getProviderKey() && $token->isAuthenticated() && $token->getUsername() === $user) {
                 return;
             }
         }

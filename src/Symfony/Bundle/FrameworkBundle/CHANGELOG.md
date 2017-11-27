@@ -4,6 +4,7 @@ CHANGELOG
 2.1.0
 -----
 
+ * moved the translation files to the Form and Validator components
  * changed the default extension for XLIFF files from .xliff to .xlf
  * moved Symfony\Bundle\FrameworkBundle\ContainerAwareEventDispatcher to Symfony\Component\EventDispatcher\ContainerAwareEventDispatcher
  * moved Symfony\Bundle\FrameworkBundle\Debug\TraceableEventDispatcher to Symfony\Component\EventDispatcher\ContainerAwareTraceableEventDispatcher
@@ -31,3 +32,12 @@ CHANGELOG
   `gc_probability`/`gc_divisor` chance of being run. The `gc_maxlifetime` defines
    how long a session can idle for. It is different from cookie lifetime which
    declares how long a cookie can be stored on the remote client.
+ * Removed 'auto_start' configuration parameter from session config. The session will
+   start on demand.
+ * [BC BREAK] TemplateNameParser::parseFromFilename() has been moved to a dedicated
+   parser: TemplateFilenameParser::parse().
+ * [BC BREAK] Kernel parameters are replaced by their value wherever they appear
+   in Route patterns, requirements and defaults. Use '%%' as the escaped value for '%'.
+ * [BC BREAK] Switched behavior of flash messages to expire flash messages on retrieval
+   using Symfony\Component\HttpFoundation\Session\Flash\FlashBag as opposed to on
+   next pageload regardless of whether they are displayed or not.

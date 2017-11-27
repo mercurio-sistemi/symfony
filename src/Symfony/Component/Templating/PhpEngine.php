@@ -38,6 +38,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
     protected $charset;
     protected $cache;
     protected $escapers;
+    protected static $escaperCache;
     protected $globals;
     protected $parser;
 
@@ -183,7 +184,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
      *
      * @param string $name The helper name
      *
-     * @return mixed The helper value
+     * @return HelperInterface The helper value
      *
      * @throws \InvalidArgumentException if the helper is not defined
      *
@@ -197,7 +198,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
     /**
      * Returns true if the helper is defined.
      *
-     * @param string  $name The helper name
+     * @param string $name The helper name
      *
      * @return Boolean true if the helper is defined, false otherwise
      *
@@ -279,7 +280,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
     /**
      * Returns true if the helper if defined.
      *
-     * @param string  $name The helper name
+     * @param string $name The helper name
      *
      * @return Boolean true if the helper is defined, false otherwise
      *
@@ -313,7 +314,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
     /**
      * Decorates the current template with another one.
      *
-     * @param string $template  The decorator logical name
+     * @param string $template The decorator logical name
      *
      * @api
      */
@@ -334,6 +335,20 @@ class PhpEngine implements EngineInterface, \ArrayAccess
      */
     public function escape($value, $context = 'html')
     {
+        if (is_numeric($value)) {
+            return $value;
+        }
+
+        // If we deal with a scalar value, we can cache the result to increase
+        // the performance when the same value is escaped multiple times (e.g. loops)
+        if (is_scalar($value)) {
+            if (!isset(self::$escaperCache[$context][$value])) {
+                self::$escaperCache[$context][$value] = call_user_func($this->getEscaper($context), $value);
+            }
+
+            return self::$escaperCache[$context][$value];
+        }
+
         return call_user_func($this->getEscaper($context), $value);
     }
 
@@ -372,6 +387,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
     public function setEscaper($context, $escaper)
     {
         $this->escapers[$context] = $escaper;
+        self::$escaperCache[$context] = array();
     }
 
     /**
@@ -394,7 +410,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
 
     /**
      * @param string $name
-     * @param mixed $value
+     * @param mixed  $value
      *
      * @api
      */
@@ -445,8 +461,7 @@ class PhpEngine implements EngineInterface, \ArrayAccess
                  *
                  * @return string the escaped value
                  */
-                function ($value) use ($that)
-                {
+                function ($value) use ($that) {
                     // Numbers and Boolean values get turned into strings which can cause problems
                     // with type comparisons (e.g. === or is_int() etc).
                     return is_string($value) ? htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, $that->getCharset(), false) : $value;
@@ -460,14 +475,12 @@ class PhpEngine implements EngineInterface, \ArrayAccess
                  * @param string $value the value to escape
                  * @return string the escaped value
                  */
-                function ($value) use ($that)
-                {
+                function ($value) use ($that) {
                     if ('UTF-8' != $that->getCharset()) {
                         $value = $that->convertEncoding($value, 'UTF-8', $that->getCharset());
                     }
 
-                    $callback = function ($matches) use ($that)
-                    {
+                    $callback = function ($matches) use ($that) {
                         $char = $matches[0];
 
                         // \xHH
@@ -492,6 +505,8 @@ class PhpEngine implements EngineInterface, \ArrayAccess
                     return $value;
                 },
         );
+
+        self::$escaperCache = array();
     }
 
     /**
@@ -507,10 +522,10 @@ class PhpEngine implements EngineInterface, \ArrayAccess
      */
     public function convertEncoding($string, $to, $from)
     {
-        if (function_exists('iconv')) {
-            return iconv($from, $to, $string);
-        } elseif (function_exists('mb_convert_encoding')) {
+        if (function_exists('mb_convert_encoding')) {
             return mb_convert_encoding($string, $to, $from);
+        } elseif (function_exists('iconv')) {
+            return iconv($from, $to, $string);
         }
 
         throw new \RuntimeException('No suitable convert encoding function (use UTF-8 as your encoding or install the iconv or mbstring extension).');

@@ -17,7 +17,7 @@ use Symfony\Component\Form\Exception\UnexpectedTypeException;
 /**
  * Transforms between a normalized time and a localized time string
  *
- * @author Bernhard Schussek <bernhard.schussek@symfony.com>
+ * @author Bernhard Schussek <bschussek@gmail.com>
  * @author Florian Eckerstorfer <florian@eckerstorfer.org>
  */
 class DateTimeToLocalizedStringTransformer extends BaseDateTimeTransformer
@@ -32,15 +32,14 @@ class DateTimeToLocalizedStringTransformer extends BaseDateTimeTransformer
      *
      * @see BaseDateTimeTransformer::formats for available format options
      *
-     * @param string             $inputTimezone   The name of the input timezone
-     * @param string             $outputTimezone  The name of the output timezone
-     * @param integer            $dateFormat      The date format
-     * @param integer            $timeFormat      The time format
-     * @param \IntlDateFormatter $calendar        An \IntlDateFormatter instance
-     * @param string             $pattern         A pattern to pass to \IntlDateFormatter
+     * @param string  $inputTimezone  The name of the input timezone
+     * @param string  $outputTimezone The name of the output timezone
+     * @param integer $dateFormat     The date format
+     * @param integer $timeFormat     The time format
+     * @param integer $calendar       One of the \IntlDateFormatter calendar constants
+     * @param string  $pattern        A pattern to pass to \IntlDateFormatter
      *
-     * @throws UnexpectedTypeException If a format is not supported
-     * @throws UnexpectedTypeException if a timezone is not a string
+     * @throws UnexpectedTypeException If a format is not supported or if a timezone is not a string
      */
     public function __construct($inputTimezone = null, $outputTimezone = null, $dateFormat = null, $timeFormat = null, $calendar = \IntlDateFormatter::GREGORIAN, $pattern = null)
     {
@@ -71,12 +70,13 @@ class DateTimeToLocalizedStringTransformer extends BaseDateTimeTransformer
     /**
      * Transforms a normalized date into a localized date string/array.
      *
-     * @param  DateTime $dateTime  Normalized date.
+     * @param \DateTime $dateTime Normalized date.
      *
-     * @return string|array        Localized date string/array.
+     * @return string|array Localized date string/array.
      *
-     * @throws UnexpectedTypeException if the given value is not an instance of \DateTime
-     * @throws TransformationFailedException if the date could not be transformed
+     * @throws TransformationFailedException If the given value is not an instance
+     *                                       of \DateTime or if the date could not
+     *                                       be transformed.
      */
     public function transform($dateTime)
     {
@@ -85,7 +85,7 @@ class DateTimeToLocalizedStringTransformer extends BaseDateTimeTransformer
         }
 
         if (!$dateTime instanceof \DateTime) {
-            throw new UnexpectedTypeException($dateTime, '\DateTime');
+            throw new TransformationFailedException('Expected a \DateTime.');
         }
 
         // convert time to UTC before passing it to the formatter
@@ -106,18 +106,18 @@ class DateTimeToLocalizedStringTransformer extends BaseDateTimeTransformer
     /**
      * Transforms a localized date string/array into a normalized date.
      *
-     * @param  string|array $value Localized date string/array
+     * @param string|array $value Localized date string/array
      *
-     * @return DateTime Normalized date
+     * @return \DateTime Normalized date
      *
-     * @throws UnexpectedTypeException if the given value is not a string
-     * @throws TransformationFailedException if the date could not be parsed
-     * @throws TransformationFailedException if the input timezone is not supported
+     * @throws TransformationFailedException if the given value is not a string,
+     *                                       if the date could not be parsed or
+     *                                       if the input timezone is not supported
      */
     public function reverseTransform($value)
     {
         if (!is_string($value)) {
-            throw new UnexpectedTypeException($value, 'string');
+            throw new TransformationFailedException('Expected a string.');
         }
 
         if ('' === $value) {
@@ -157,6 +157,9 @@ class DateTimeToLocalizedStringTransformer extends BaseDateTimeTransformer
         $calendar = $this->calendar;
         $pattern = $this->pattern;
 
-        return new \IntlDateFormatter(\Locale::getDefault(), $dateFormat, $timeFormat, $timezone, $calendar, $pattern);
+        $intlDateFormatter = new \IntlDateFormatter(\Locale::getDefault(), $dateFormat, $timeFormat, $timezone, $calendar, $pattern);
+        $intlDateFormatter->setLenient(false);
+
+        return $intlDateFormatter;
     }
 }

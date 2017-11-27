@@ -19,6 +19,7 @@ use Symfony\Component\Validator\Validator;
 use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\ConstraintValidatorFactory;
+use Symfony\Component\Validator\Constraints\Valid;
 use Symfony\Component\Validator\Mapping\ClassMetadata;
 
 class ValidatorTest extends \PHPUnit_Framework_TestCase
@@ -38,7 +39,7 @@ class ValidatorTest extends \PHPUnit_Framework_TestCase
         $this->validator = null;
     }
 
-    public function testValidate_defaultGroup()
+    public function testValidateDefaultGroup()
     {
         $entity = new Entity();
         $metadata = new ClassMetadata(get_class($entity));
@@ -61,7 +62,7 @@ class ValidatorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($violations, $this->validator->validate($entity));
     }
 
-    public function testValidate_oneGroup()
+    public function testValidateOneGroup()
     {
         $entity = new Entity();
         $metadata = new ClassMetadata(get_class($entity));
@@ -84,7 +85,7 @@ class ValidatorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($violations, $this->validator->validate($entity, 'Custom'));
     }
 
-    public function testValidate_multipleGroups()
+    public function testValidateMultipleGroups()
     {
         $entity = new Entity();
         $metadata = new ClassMetadata(get_class($entity));
@@ -118,7 +119,7 @@ class ValidatorTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($violations, $result);
     }
 
-    public function testValidate_groupSequenceProvider()
+    public function testValidateGroupSequenceProvider()
     {
         $entity = new GroupSequenceProviderEntity();
         $metadata = new ClassMetadata(get_class($entity));
@@ -198,6 +199,18 @@ class ValidatorTest extends \PHPUnit_Framework_TestCase
         ));
 
         $this->assertEquals($violations, $this->validator->validateValue('Bernhard', new FailingConstraint()));
+    }
+
+    /**
+     * @expectedException Symfony\Component\Validator\Exception\ValidatorException
+     */
+    public function testValidateValueRejectsValid()
+    {
+        $entity = new Entity();
+        $metadata = new ClassMetadata(get_class($entity));
+        $this->factory->addClassMetadata($metadata);
+
+        $this->validator->validateValue($entity, new Valid());
     }
 
     public function testGetMetadataFactory()

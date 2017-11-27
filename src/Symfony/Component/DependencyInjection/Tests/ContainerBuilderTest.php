@@ -19,6 +19,7 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\Exception\RuntimeException;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBag;
 use Symfony\Component\Config\Resource\FileResource;
@@ -114,6 +115,26 @@ class ContainerBuilderTest extends \PHPUnit_Framework_TestCase
 
         $builder->register('foobar', 'stdClass')->setScope('container');
         $this->assertTrue($builder->get('bar') === $builder->get('bar'), '->get() always returns the same instance if the service is shared');
+    }
+
+    /**
+     * @covers                   \Symfony\Component\DependencyInjection\ContainerBuilder::get
+     * @expectedException        \Symfony\Component\DependencyInjection\Exception\RuntimeException
+     * @expectedExceptionMessage You have requested a synthetic service ("foo"). The DIC does not know how to construct this service.
+     */
+    public function testGetUnsetLoadingServiceWhenCreateServiceThrowsAnException()
+    {
+        $builder = new ContainerBuilder();
+        $builder->register('foo', 'stdClass')->setSynthetic(true);
+
+        // we expect a RuntimeException here as foo is synthetic
+        try {
+            $builder->get('foo');
+        } catch (RuntimeException $e) {
+        }
+
+        // we must also have the same RuntimeException here
+        $builder->get('foo');
     }
 
     /**
@@ -251,9 +272,9 @@ class ContainerBuilderTest extends \PHPUnit_Framework_TestCase
     {
         $builder = new ContainerBuilder();
         $builder->register('bar', 'stdClass');
-        $builder->register('foo1', 'FooClass')->addArgument(array('foo' => '%value%', '%value%' => 'foo', new Reference('bar')));
+        $builder->register('foo1', 'FooClass')->addArgument(array('foo' => '%value%', '%value%' => 'foo', new Reference('bar'), '%%unescape_it%%'));
         $builder->setParameter('value', 'bar');
-        $this->assertEquals(array('foo' => 'bar', 'bar' => 'foo', $builder->get('bar')), $builder->get('foo1')->arguments, '->createService() replaces parameters and service references in the arguments provided by the service definition');
+        $this->assertEquals(array('foo' => 'bar', 'bar' => 'foo', $builder->get('bar'), '%unescape_it%'), $builder->get('foo1')->arguments, '->createService() replaces parameters and service references in the arguments provided by the service definition');
     }
 
     /**
@@ -317,6 +338,17 @@ class ContainerBuilderTest extends \PHPUnit_Framework_TestCase
         } catch (\InvalidArgumentException $e) {
             $this->assertEquals('The configure callable for class "FooClass" is not a callable.', $e->getMessage(), '->createService() throws an InvalidArgumentException if the configure callable is not a valid callable');
         }
+    }
+
+    /**
+     * @covers Symfony\Component\DependencyInjection\ContainerBuilder::createService
+     * @expectedException \RuntimeException
+     */
+    public function testCreateSyntheticService()
+    {
+        $builder = new ContainerBuilder();
+        $builder->register('foo', 'FooClass')->setSynthetic(true);
+        $builder->get('foo');
     }
 
     /**
@@ -549,6 +581,5 @@ class ContainerBuilderTest extends \PHPUnit_Framework_TestCase
         $container->setDefinition('a', new Definition());
     }
 }
-
 
 class FooClass {}

@@ -30,22 +30,28 @@ class StringInput extends ArgvInput
     /**
      * Constructor.
      *
-     * @param string     $input An array of parameters from the CLI (in the argv format)
+     * @param string          $input      An array of parameters from the CLI (in the argv format)
      * @param InputDefinition $definition A InputDefinition instance
      *
      * @api
      */
     public function __construct($input, InputDefinition $definition = null)
     {
-        parent::__construct(array(), $definition);
+        parent::__construct(array(), null);
 
         $this->setTokens($this->tokenize($input));
+
+        if (null !== $definition) {
+            $this->bind($definition);
+        }
     }
 
     /**
      * Tokenizes a string.
      *
      * @param string $input The input to tokenize
+     *
+     * @return array An array of tokens
      *
      * @throws \InvalidArgumentException When unable to parse input (should never happen)
      */

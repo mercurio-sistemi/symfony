@@ -27,7 +27,7 @@ class LintCommand extends ContainerAwareCommand
     {
         $this
             ->setName('twig:lint')
-            ->setDescription('Lints a template and outputs eventual errors')
+            ->setDescription('Lints a template and outputs encountered errors')
             ->addArgument('filename')
             ->setHelp(<<<EOF
 The <info>%command.name%</info> command lints a template and outputs to stdout
@@ -70,11 +70,11 @@ EOF
                 $template .= fread(STDIN, 1024);
             }
 
-            return $twig->parse($twig->tokenize($template));
+            return $this->validateTemplate($twig, $output, $template);
         }
 
         if (0 !== strpos($filename, '@') && !is_readable($filename)) {
-            throw new \RuntimeException("File or directory '%s' is not readable");
+            throw new \RuntimeException(sprintf('File or directory "%s" is not readable', $filename));
         }
 
         $files = array();
@@ -87,10 +87,65 @@ EOF
             $files = Finder::create()->files()->in($dir)->name('*.twig');
         }
 
+        $errors = 0;
         foreach ($files as $file) {
-            $twig->parse($twig->tokenize(file_get_contents($file), (string) $file));
+            $errors += $this->validateTemplate($twig, $output, file_get_contents($file), $file);
         }
 
-        $output->writeln('<info>No syntax error detected.</info>');
+        return $errors > 0 ? 1 : 0;
+    }
+
+    protected function validateTemplate(\Twig_Environment $twig, OutputInterface $output, $template, $file = null)
+    {
+        try {
+            $twig->parse($twig->tokenize($template, $file ? (string) $file : null));
+            $output->writeln('<info>OK</info>'.($file ? sprintf(' in %s', $file) : ''));
+        } catch (\Twig_Error $e) {
+            $this->renderException($output, $template, $e, $file);
+
+            return 1;
+        }
+
+        return 0;
+    }
+
+    protected function renderException(OutputInterface $output, $template, \Twig_Error $exception, $file = null)
+    {
+        $line =  $exception->getTemplateLine();
+        $lines = $this->getContext($template, $line);
+
+        if ($file) {
+            $output->writeln(sprintf("<error>KO</error> in %s (line %s)", $file, $line));
+        } else {
+            $output->writeln(sprintf("<error>KO</error> (line %s)", $line));
+        }
+
+        foreach ($lines as $no => $code) {
+            $output->writeln(sprintf(
+                "%s %-6s %s",
+                $no == $line ? '<error>>></error>' : '  ',
+                $no,
+                $code
+            ));
+            if ($no == $line) {
+                $output->writeln(sprintf('<error>>> %s</error> ', $exception->getRawMessage()));
+            }
+        }
+    }
+
+    protected function getContext($template, $line, $context = 3)
+    {
+        $lines = explode("\n", $template);
+
+        $position = max(0, $line - $context);
+        $max = min(count($lines), $line - 1 + $context);
+
+        $result = array();
+        while ($position < $max) {
+            $result[$position + 1] = $lines[$position];
+            $position++;
+        }
+
+        return $result;
     }
 }

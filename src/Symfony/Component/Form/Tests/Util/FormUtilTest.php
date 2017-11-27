@@ -15,65 +15,6 @@ use Symfony\Component\Form\Util\FormUtil;
 
 class FormUtilTest extends \PHPUnit_Framework_TestCase
 {
-    public function isChoiceGroupProvider()
-    {
-        return array(
-            array(false, 0),
-            array(false, '0'),
-            array(false, '1'),
-            array(false, 1),
-            array(false, ''),
-            array(false, null),
-            array(false, true),
-
-            array(true, array()),
-        );
-    }
-
-    /**
-     * @dataProvider isChoiceGroupProvider
-     */
-    public function testIsChoiceGroup($expected, $value)
-    {
-        $this->assertSame($expected, FormUtil::isChoiceGroup($value));
-    }
-
-    public function testIsChoiceGroupPart2()
-    {
-        $this->assertTrue(FormUtil::isChoiceGroup(new \SplFixedArray(1)));
-    }
-
-    public function isChoiceSelectedProvider()
-    {
-        // The commented cases should not be necessary anymore, because the
-        // choice lists should assure that both values passed here are always
-        // strings
-        return array(
-//             array(true, 0, 0),
-            array(true, '0', '0'),
-            array(true, '1', '1'),
-//             array(true, false, 0),
-//             array(true, true, 1),
-            array(true, '', ''),
-//             array(true, null, ''),
-            array(true, '1.23', '1.23'),
-            array(true, 'foo', 'foo'),
-            array(true, 'foo10', 'foo10'),
-            array(true, 'foo', array(1, 'foo', 'foo10')),
-
-            array(false, 10, array(1, 'foo', 'foo10')),
-            array(false, 0, array(1, 'foo', 'foo10')),
-        );
-    }
-
-    /**
-     * @dataProvider isChoiceSelectedProvider
-     */
-    public function testIsChoiceSelected($expected, $choice, $value)
-    {
-        $this->assertSame($expected, FormUtil::isChoiceSelected($choice, $value));
-    }
-
     public function singularifyProvider()
     {
         // see http://english-zone.com/spelling/plurals.html
@@ -84,8 +25,9 @@ class FormUtilTest extends \PHPUnit_Framework_TestCase
             array('funguses', array('fungus', 'funguse', 'fungusis')),
             array('fungi', 'fungus'),
             array('axes', array('ax', 'axe', 'axis')),
-            array('appendices', array('appendex', 'appendix')),
-            array('indices', array('index', 'indix')),
+            array('appendices', array('appendex', 'appendix', 'appendice')),
+            array('indices', array('index', 'indix', 'indice')),
+            array('prices', array('prex', 'prix', 'price')),
             array('indexes', 'index'),
             array('children', 'child'),
             array('men', 'man'),
@@ -104,7 +46,7 @@ class FormUtilTest extends \PHPUnit_Framework_TestCase
             array('foci', 'focus'),
             array('focuses', array('focus', 'focuse', 'focusis')),
             array('oases', array('oas', 'oase', 'oasis')),
-            array('matrices', array('matrex', 'matrix')),
+            array('matrices', array('matrex', 'matrix', 'matrice')),
             array('matrixes', 'matrix'),
             array('bureaus', 'bureau'),
             array('bureaux', 'bureau'),

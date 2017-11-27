@@ -59,9 +59,14 @@ class MockArraySessionStorage implements SessionStorageInterface
     protected $metadataBag;
 
     /**
+     * @var array
+     */
+    protected $bags;
+
+    /**
      * Constructor.
      *
-     * @param string  $name    Session name
+     * @param string      $name    Session name
      * @param MetadataBag $metaBag MetadataBag instance.
      */
     public function __construct($name = 'MOCKSESSID', MetadataBag $metaBag = null)
@@ -154,6 +159,9 @@ class MockArraySessionStorage implements SessionStorageInterface
      */
     public function save()
     {
+        if (!$this->started || $this->closed) {
+            throw new \RuntimeException("Trying to save a session that was not started yet or was already closed");
+        }
         // nothing to do since we don't persist the session data
         $this->closed = false;
     }
@@ -197,6 +205,14 @@ class MockArraySessionStorage implements SessionStorageInterface
         }
 
         return $this->bags[$name];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function isStarted()
+    {
+        return $this->started;
     }
 
     /**

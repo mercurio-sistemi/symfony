@@ -31,16 +31,16 @@ interface VoterInterface
      *
      * @return Boolean true if this Voter supports the attribute, false otherwise
      */
-    function supportsAttribute($attribute);
+    public function supportsAttribute($attribute);
 
     /**
      * Checks if the voter supports the given class.
      *
      * @param string $class A class name
      *
-     * @return true if this Voter can process the class
+     * @return Boolean true if this Voter can process the class
      */
-    function supportsClass($class);
+    public function supportsClass($class);
 
     /**
      * Returns the vote for the given parameters.
@@ -54,5 +54,5 @@ interface VoterInterface
      *
      * @return integer either ACCESS_GRANTED, ACCESS_ABSTAIN, or ACCESS_DENIED
      */
-    function vote(TokenInterface $token, $object, array $attributes);
+    public function vote(TokenInterface $token, $object, array $attributes);
 }

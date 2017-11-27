@@ -91,21 +91,14 @@ class SecurityExtension extends Extension
         // add some required classes for compilation
         $this->addClassesToCompile(array(
             'Symfony\\Component\\Security\\Http\\Firewall',
-            'Symfony\\Component\\Security\\Http\\FirewallMapInterface',
             'Symfony\\Component\\Security\\Core\\SecurityContext',
-            'Symfony\\Component\\Security\\Core\\SecurityContextInterface',
             'Symfony\\Component\\Security\\Core\\User\\UserProviderInterface',
             'Symfony\\Component\\Security\\Core\\Authentication\\AuthenticationProviderManager',
-            'Symfony\\Component\\Security\\Core\\Authentication\\AuthenticationManagerInterface',
             'Symfony\\Component\\Security\\Core\\Authorization\\AccessDecisionManager',
-            'Symfony\\Component\\Security\\Core\\Authorization\\AccessDecisionManagerInterface',
             'Symfony\\Component\\Security\\Core\\Authorization\\Voter\\VoterInterface',
-
             'Symfony\\Bundle\\SecurityBundle\\Security\\FirewallMap',
             'Symfony\\Bundle\\SecurityBundle\\Security\\FirewallContext',
-
             'Symfony\\Component\\HttpFoundation\\RequestMatcher',
-            'Symfony\\Component\\HttpFoundation\\RequestMatcherInterface',
         ));
     }
 
@@ -181,7 +174,6 @@ class SecurityExtension extends Extension
         }
 
         $this->addClassesToCompile(array(
-            'Symfony\\Component\\Security\\Http\\AccessMapInterface',
             'Symfony\\Component\\Security\\Http\\AccessMap',
         ));
 
@@ -190,7 +182,7 @@ class SecurityExtension extends Extension
                 $container,
                 $access['path'],
                 $access['host'],
-                count($access['methods']) === 0 ? null : $access['methods'],
+                $access['methods'],
                 $access['ip']
             );
 
@@ -287,18 +279,22 @@ class SecurityExtension extends Extension
         if (isset($firewall['logout'])) {
             $listenerId = 'security.logout_listener.'.$id;
             $listener = $container->setDefinition($listenerId, new DefinitionDecorator('security.logout_listener'));
-            $listener->replaceArgument(2, array(
+            $listener->replaceArgument(3, array(
                 'csrf_parameter' => $firewall['logout']['csrf_parameter'],
                 'intention'      => $firewall['logout']['intention'],
                 'logout_path'    => $firewall['logout']['path'],
-                'target_url'     => $firewall['logout']['target'],
             ));
             $listeners[] = new Reference($listenerId);
 
             // add logout success handler
             if (isset($firewall['logout']['success_handler'])) {
-                $listener->replaceArgument(3, new Reference($firewall['logout']['success_handler']));
+                $logoutSuccessHandlerId = $firewall['logout']['success_handler'];
+            } else {
+                $logoutSuccessHandlerId = 'security.logout.success_handler.'.$id;
+                $logoutSuccessHandler = $container->setDefinition($logoutSuccessHandlerId, new DefinitionDecorator('security.logout.success_handler'));
+                $logoutSuccessHandler->replaceArgument(1, $firewall['logout']['target']);
             }
+            $listener->replaceArgument(2, new Reference($logoutSuccessHandlerId));
 
             // add CSRF provider
             if (isset($firewall['logout']['csrf_provider'])) {
@@ -551,13 +547,14 @@ class SecurityExtension extends Extension
     {
         $exceptionListenerId = 'security.exception_listener.'.$id;
         $listener = $container->setDefinition($exceptionListenerId, new DefinitionDecorator('security.exception_listener'));
-        $listener->replaceArgument(3, null === $defaultEntryPoint ? null : new Reference($defaultEntryPoint));
+        $listener->replaceArgument(3, $id);
+        $listener->replaceArgument(4, null === $defaultEntryPoint ? null : new Reference($defaultEntryPoint));
 
         // access denied handler setup
         if (isset($config['access_denied_handler'])) {
-            $listener->replaceArgument(5, new Reference($config['access_denied_handler']));
+            $listener->replaceArgument(6, new Reference($config['access_denied_handler']));
         } elseif (isset($config['access_denied_url'])) {
-            $listener->replaceArgument(4, $config['access_denied_url']);
+            $listener->replaceArgument(5, $config['access_denied_url']);
         }
 
         return $exceptionListenerId;
@@ -577,13 +574,17 @@ class SecurityExtension extends Extension
         return $switchUserListenerId;
     }
 
-    private function createRequestMatcher($container, $path = null, $host = null, $methods = null, $ip = null, array $attributes = array())
+    private function createRequestMatcher($container, $path = null, $host = null, $methods = array(), $ip = null, array $attributes = array())
     {
         $serialized = serialize(array($path, $host, $methods, $ip, $attributes));
         $id = 'security.request_matcher.'.md5($serialized).sha1($serialized);
 
         if (isset($this->requestMatchers[$id])) {
             return $this->requestMatchers[$id];
+        }
+
+        if ($methods) {
+            $methods = array_map('strtoupper', (array) $methods);
         }
 
         // only add arguments that are necessary
@@ -632,4 +633,3 @@ class SecurityExtension extends Extension
         return new MainConfiguration($this->factories, $this->userProviderFactories);
     }
 }
-

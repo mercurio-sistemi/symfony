@@ -17,13 +17,25 @@ use Symfony\Component\Routing\Matcher\ApacheUrlMatcher;
 
 class ApacheUrlMatcherTest extends \PHPUnit_Framework_TestCase
 {
+    protected $server;
+
+    protected function setUp()
+    {
+        $this->server = $_SERVER;
+    }
+
+    protected function tearDown()
+    {
+        $_SERVER = $this->server;
+    }
+
     /**
      * @dataProvider getMatchData
      */
     public function testMatch($name, $pathinfo, $server, $expect)
     {
-        $collection = new RouteCollection;
-        $context = new RequestContext;
+        $collection = new RouteCollection();
+        $context = new RequestContext();
         $matcher = new ApacheUrlMatcher($collection, $context);
 
         $_SERVER = $server;
@@ -50,6 +62,35 @@ class ApacheUrlMatcherTest extends \PHPUnit_Framework_TestCase
                 ),
             ),
             array(
+                'Route with params and defaults',
+                '/hello/hugo',
+                array(
+                    '_ROUTING__route' => 'hello',
+                    '_ROUTING__controller' => 'AcmeBundle:Default:index',
+                    '_ROUTING_name' => 'hugo',
+                    '_ROUTING_DEFAULTS_name' => 'world',
+                ),
+                array(
+                    'name' => 'hugo',
+                    '_route' => 'hello',
+                    '_controller' => 'AcmeBundle:Default:index',
+                ),
+            ),
+            array(
+                'Route with defaults only',
+                '/hello',
+                array(
+                    '_ROUTING__route' => 'hello',
+                    '_ROUTING__controller' => 'AcmeBundle:Default:index',
+                    '_ROUTING_DEFAULTS_name' => 'world',
+                ),
+                array(
+                    'name' => 'world',
+                    '_route' => 'hello',
+                    '_controller' => 'AcmeBundle:Default:index',
+                ),
+            ),
+            array(
                 'REDIRECT_ envs',
                 '/hello/world',
                 array(
@@ -66,4 +107,3 @@ class ApacheUrlMatcherTest extends \PHPUnit_Framework_TestCase
         );
     }
 }
-

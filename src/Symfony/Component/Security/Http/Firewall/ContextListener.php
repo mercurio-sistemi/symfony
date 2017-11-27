@@ -37,6 +37,7 @@ class ContextListener implements ListenerInterface
     private $contextKey;
     private $logger;
     private $userProviders;
+    private $dispatcher;
 
     public function __construct(SecurityContextInterface $context, array $userProviders, $contextKey, LoggerInterface $logger = null, EventDispatcherInterface $dispatcher = null)
     {
@@ -54,10 +55,7 @@ class ContextListener implements ListenerInterface
         $this->userProviders = $userProviders;
         $this->contextKey = $contextKey;
         $this->logger = $logger;
-
-        if (null !== $dispatcher) {
-            $dispatcher->addListener(KernelEvents::RESPONSE, array($this, 'onKernelResponse'));
-        }
+        $this->dispatcher = $dispatcher;
     }
 
     /**
@@ -67,25 +65,36 @@ class ContextListener implements ListenerInterface
      */
     public function handle(GetResponseEvent $event)
     {
-        $request = $event->getRequest();
+        if (null !== $this->dispatcher && HttpKernelInterface::MASTER_REQUEST === $event->getRequestType()) {
+            $this->dispatcher->addListener(KernelEvents::RESPONSE, array($this, 'onKernelResponse'));
+        }
 
+        $request = $event->getRequest();
         $session = $request->hasPreviousSession() ? $request->getSession() : null;
 
         if (null === $session || null === $token = $session->get('_security_'.$this->contextKey)) {
             $this->context->setToken(null);
-        } else {
-            if (null !== $this->logger) {
-                $this->logger->debug('Read SecurityContext from the session');
-            }
 
-            $token = unserialize($token);
-
-            if (null !== $token) {
-                $token = $this->refreshUser($token);
-            }
-
-            $this->context->setToken($token);
+            return;
         }
+
+        $token = unserialize($token);
+
+        if (null !== $this->logger) {
+            $this->logger->debug('Read SecurityContext from the session');
+        }
+
+        if ($token instanceof TokenInterface) {
+            $token = $this->refreshUser($token);
+        } elseif (null !== $token) {
+            if (null !== $this->logger) {
+                $this->logger->warn(sprintf('Session includes a "%s" where a security token is expected', is_object($token) ? get_class($token) : gettype($token)));
+            }
+
+            $token = null;
+        }
+
+        $this->context->setToken($token);
     }
 
     /**
@@ -107,12 +116,17 @@ class ContextListener implements ListenerInterface
             $this->logger->debug('Write SecurityContext in the session');
         }
 
-        if (null === $session = $event->getRequest()->getSession()) {
+        $request = $event->getRequest();
+        $session = $request->getSession();
+
+        if (null === $session) {
             return;
         }
 
         if ((null === $token = $this->context->getToken()) || ($token instanceof AnonymousToken)) {
-            $session->remove('_security_'.$this->contextKey);
+            if ($request->hasPreviousSession()) {
+                $session->remove('_security_'.$this->contextKey);
+            }
         } else {
             $session->set('_security_'.$this->contextKey, serialize($token));
         }

@@ -70,6 +70,29 @@ class ModelChoiceListTest extends Propel1TestCase
         $this->assertSame(array(1 => $item1, 2 => $item2), $choiceList->getChoices());
     }
 
+    public function testFlattenedPreferredChoices()
+    {
+        $item1 = new Item(1, 'Foo');
+        $item2 = new Item(2, 'Bar');
+
+        $choiceList = new ModelChoiceList(
+            self::ITEM_CLASS,
+            'value',
+            array(
+                $item1,
+                $item2,
+            ),
+            null,
+            null,
+            array(
+                $item1
+            )
+        );
+
+        $this->assertSame(array(1 => $item1, 2 => $item2), $choiceList->getChoices());
+        $this->assertEquals(array(1 => new ChoiceView($item1, '1', 'Foo')), $choiceList->getPreferredViews());
+    }
+
     public function testNestedChoices()
     {
         $item1 = new Item(1, 'Foo');
@@ -86,8 +109,8 @@ class ModelChoiceListTest extends Propel1TestCase
 
         $this->assertSame(array(1 => $item1, 2 => $item2), $choiceList->getChoices());
         $this->assertEquals(array(
-            'group1' => array(1 => new ChoiceView('1', 'Foo')),
-            'group2' => array(2 => new ChoiceView('2', 'Bar'))
+            'group1' => array(1 => new ChoiceView($item1, '1', 'Foo')),
+            'group2' => array(2 => new ChoiceView($item2, '2', 'Bar'))
         ), $choiceList->getRemainingViews());
     }
 
@@ -113,9 +136,9 @@ class ModelChoiceListTest extends Propel1TestCase
 
         $this->assertEquals(array(1 => $item1, 2 => $item2, 3 => $item3, 4 => $item4), $choiceList->getChoices());
         $this->assertEquals(array(
-            'Group1' => array(1 => new ChoiceView('1', 'Foo'), 2 => new ChoiceView('2', 'Bar')),
-            'Group2' => array(3 => new ChoiceView('3', 'Baz')),
-            4 => new ChoiceView('4', 'Boo!')
+            'Group1' => array(1 => new ChoiceView($item1, '1', 'Foo'), 2 => new ChoiceView($item2, '2', 'Bar')),
+            'Group2' => array(3 => new ChoiceView($item3, '3', 'Baz')),
+            4 => new ChoiceView($item4, '4', 'Boo!')
         ), $choiceList->getRemainingViews());
     }
 

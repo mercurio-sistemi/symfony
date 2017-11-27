@@ -61,10 +61,10 @@ class XmlFileLoader extends FileLoader
     /**
      * Parses a node from a loaded XML file.
      *
-     * @param RouteCollection $collection the collection to associate with the node
-     * @param DOMElement      $node the node to parse
-     * @param string          $path the path of the XML file being processed
-     * @param string          $file
+     * @param RouteCollection  $collection the collection to associate with the node
+     * @param \DOMElement      $node       the node to parse
+     * @param string           $path       the path of the XML file being processed
+     * @param string           $file
      */
     protected function parseNode(RouteCollection $collection, \DOMElement $node, $path, $file)
     {
@@ -110,12 +110,7 @@ class XmlFileLoader extends FileLoader
     }
 
     /**
-     * Returns true if this class supports the given resource.
-     *
-     * @param mixed  $resource A resource
-     * @param string $type     The resource type
-     *
-     * @return Boolean True if this class supports the given resource, false otherwise
+     * {@inheritdoc}
      *
      * @api
      */
@@ -146,7 +141,11 @@ class XmlFileLoader extends FileLoader
 
             switch ($node->tagName) {
                 case 'default':
-                    $defaults[(string) $node->getAttribute('key')] = trim((string) $node->nodeValue);
+                    if ($node->hasAttribute('xsi:nil') && 'true' == $node->getAttribute('xsi:nil')) {
+                        $defaults[(string) $node->getAttribute('key')] = null;
+                    } else {
+                        $defaults[(string) $node->getAttribute('key')] = trim((string) $node->nodeValue);
+                    }
                     break;
                 case 'option':
                     $options[(string) $node->getAttribute('key')] = trim((string) $node->nodeValue);
@@ -175,14 +174,28 @@ class XmlFileLoader extends FileLoader
      */
     protected function loadFile($file)
     {
+        $internalErrors = libxml_use_internal_errors(true);
+        $disableEntities = libxml_disable_entity_loader(true);
+        libxml_clear_errors();
+
         $dom = new \DOMDocument();
-        libxml_use_internal_errors(true);
-        if (!$dom->load($file, defined('LIBXML_COMPACT') ? LIBXML_COMPACT : 0)) {
-            throw new \InvalidArgumentException(implode("\n", $this->getXmlErrors()));
-        }
         $dom->validateOnParse = true;
+        if (!$dom->loadXML(file_get_contents($file), LIBXML_NONET | (defined('LIBXML_COMPACT') ? LIBXML_COMPACT : 0))) {
+            libxml_disable_entity_loader($disableEntities);
+
+            throw new \InvalidArgumentException(implode("\n", $this->getXmlErrors($internalErrors)));
+        }
         $dom->normalizeDocument();
-        libxml_use_internal_errors(false);
+
+        libxml_use_internal_errors($internalErrors);
+        libxml_disable_entity_loader($disableEntities);
+
+        foreach ($dom->childNodes as $child) {
+            if ($child->nodeType === XML_DOCUMENT_TYPE_NODE) {
+                throw new \InvalidArgumentException('Document types are not allowed.');
+            }
+        }
+
         $this->validate($dom);
 
         return $dom;
@@ -200,8 +213,10 @@ class XmlFileLoader extends FileLoader
         $location = __DIR__.'/schema/routing/routing-1.0.xsd';
 
         $current = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
         if (!$dom->schemaValidate($location)) {
-            throw new \InvalidArgumentException(implode("\n", $this->getXmlErrors()));
+            throw new \InvalidArgumentException(implode("\n", $this->getXmlErrors($current)));
         }
         libxml_use_internal_errors($current);
     }
@@ -211,7 +226,7 @@ class XmlFileLoader extends FileLoader
      *
      * @return array An array of libxml error strings
      */
-    private function getXmlErrors()
+    private function getXmlErrors($internalErrors)
     {
         $errors = array();
         foreach (libxml_get_errors() as $error) {
@@ -226,6 +241,7 @@ class XmlFileLoader extends FileLoader
         }
 
         libxml_clear_errors();
+        libxml_use_internal_errors($internalErrors);
 
         return $errors;
     }

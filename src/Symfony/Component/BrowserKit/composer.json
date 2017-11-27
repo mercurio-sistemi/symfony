@@ -24,15 +24,11 @@
         "symfony/css-selector": "2.1.*"
     },
     "suggest": {
-        "symfony/process": "self.version"
+        "symfony/process": "2.1.*"
     },
     "autoload": {
         "psr-0": { "Symfony\\Component\\BrowserKit": "" }
     },
     "target-dir": "Symfony/Component/BrowserKit",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "2.1-dev"
-        }
-    }
+    "minimum-stability": "dev"
 }

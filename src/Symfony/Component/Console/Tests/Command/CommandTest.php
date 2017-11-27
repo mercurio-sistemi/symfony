@@ -25,9 +25,9 @@ use Symfony\Component\Console\Tester\CommandTester;
 
 class CommandTest extends \PHPUnit_Framework_TestCase
 {
-    static protected $fixturesPath;
+    protected static $fixturesPath;
 
-    static public function setUpBeforeClass()
+    public static function setUpBeforeClass()
     {
         self::$fixturesPath = __DIR__.'/../Fixtures/';
         require_once self::$fixturesPath.'/TestCommand.php';
@@ -221,11 +221,31 @@ class CommandTest extends \PHPUnit_Framework_TestCase
         }
     }
 
+    public function testRunReturnsIntegerExitCode()
+    {
+        $command = new \TestCommand();
+        $exitCode = $command->run(new StringInput(''), new NullOutput());
+        $this->assertSame(0, $exitCode, '->run() returns integer exit code (treats null as 0)');
+
+        $command = $this->getMock('TestCommand', array('execute'));
+        $command->expects($this->once())
+             ->method('execute')
+             ->will($this->returnValue('2.3'));
+        $exitCode = $command->run(new StringInput(''), new NullOutput());
+        $this->assertSame(2, $exitCode, '->run() returns integer exit code (casts numeric to int)');
+    }
+
+    public function testRunReturnsAlwaysInteger()
+    {
+        $command = new \TestCommand();
+
+        $this->assertSame(0, $command->run(new StringInput(''), new NullOutput()));
+    }
+
     public function testSetCode()
     {
         $command = new \TestCommand();
-        $ret = $command->setCode(function (InputInterface $input, OutputInterface $output)
-        {
+        $ret = $command->setCode(function (InputInterface $input, OutputInterface $output) {
             $output->writeln('from the code...');
         });
         $this->assertEquals($command, $ret, '->setCode() implements a fluent interface');

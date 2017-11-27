@@ -40,8 +40,14 @@ class FrameworkBundle extends Bundle
 {
     public function boot()
     {
-        if ($this->container->getParameter('kernel.trust_proxy_headers')) {
-            Request::trustProxyData();
+        if ($trustedProxies = $this->container->getParameter('kernel.trusted_proxies')) {
+            Request::setTrustedProxies($trustedProxies);
+        } elseif ($this->container->getParameter('kernel.trust_proxy_headers')) {
+            Request::trustProxyData(); // @deprecated, to be removed in 2.3
+        }
+
+        if ($trustedHosts = $this->container->getParameter('kernel.trusted_hosts')) {
+            Request::setTrustedHosts($trustedHosts);
         }
     }
 

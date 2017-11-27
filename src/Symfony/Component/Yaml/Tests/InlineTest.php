@@ -19,7 +19,7 @@ class InlineTest extends \PHPUnit_Framework_TestCase
     public function testParse()
     {
         foreach ($this->getTestsForParse() as $yaml => $value) {
-            $this->assertEquals($value, Inline::parse($yaml), sprintf('::parse() converts an inline YAML to a PHP structure (%s)', $yaml));
+            $this->assertSame($value, Inline::parse($yaml), sprintf('::parse() converts an inline YAML to a PHP structure (%s)', $yaml));
         }
     }
 
@@ -65,6 +65,57 @@ class InlineTest extends \PHPUnit_Framework_TestCase
         $this->assertSame($value, Inline::parse(Inline::dump($value)));
     }
 
+    /**
+     * @expectedException \Symfony\Component\Yaml\Exception\ParseException
+     */
+    public function testParseScalarWithIncorrectlyQuotedStringShouldThrowException()
+    {
+        $value = "'don't do somthin' like that'";
+        Inline::parse($value);
+    }
+
+    /**
+     * @expectedException \Symfony\Component\Yaml\Exception\ParseException
+     */
+    public function testParseScalarWithIncorrectlyDoubleQuotedStringShouldThrowException()
+    {
+        $value = '"don"t do somthin" like that"';
+        Inline::parse($value);
+    }
+
+    /**
+     * @expectedException \Symfony\Component\Yaml\Exception\ParseException
+     */
+    public function testParseInvalidMappingKeyShouldThrowException()
+    {
+        $value = '{ "foo " bar": "bar" }';
+        Inline::parse($value);
+    }
+
+    /**
+     * @expectedException \Symfony\Component\Yaml\Exception\ParseException
+     */
+    public function testParseInvalidMappingShouldThrowException()
+    {
+        Inline::parse('[foo] bar');
+    }
+
+    /**
+     * @expectedException \Symfony\Component\Yaml\Exception\ParseException
+     */
+    public function testParseInvalidSequenceShouldThrowException()
+    {
+        Inline::parse('{ foo: bar } bar');
+    }
+
+    public function testParseScalarWithCorrectlyQuotedStringShouldReturnString()
+    {
+        $value = "'don''t do somthin'' like that'";
+        $expect = "don't do somthin' like that";
+
+        $this->assertSame($expect, Inline::parseScalar($value));
+    }
+
     protected function getTestsForParse()
     {
         return array(
@@ -73,6 +124,7 @@ class InlineTest extends \PHPUnit_Framework_TestCase
             'false' => false,
             'true' => true,
             '12' => 12,
+            '-12' => -12,
             '"quoted string"' => 'quoted string',
             "'quoted string'" => 'quoted string',
             '12.30e+02' => 12.30e+02,
@@ -82,11 +134,12 @@ class InlineTest extends \PHPUnit_Framework_TestCase
             '-.Inf' => log(0),
             "'686e444'" => '686e444',
             '686e444' => 646e444,
-            '123456789123456789' => '123456789123456789',
+            '123456789123456789123456789123456789' => '123456789123456789123456789123456789',
             '"foo\r\nbar"' => "foo\r\nbar",
             "'foo#bar'" => 'foo#bar',
             "'foo # bar'" => 'foo # bar',
             "'#cfcfcf'" => '#cfcfcf',
+            '::form_base.html.twig' => '::form_base.html.twig',
 
             '2007-10-30' => mktime(0, 0, 0, 10, 30, 2007),
             '2007-10-30T02:59:43Z' => gmmktime(2, 59, 43, 10, 30, 2007),
@@ -124,6 +177,7 @@ class InlineTest extends \PHPUnit_Framework_TestCase
             '[foo, {bar: foo, foo: [foo, {bar: foo}]}, [foo, {bar: foo}]]' => array('foo', array('bar' => 'foo', 'foo' => array('foo', array('bar' => 'foo'))), array('foo', array('bar' => 'foo'))),
 
             '[foo, bar: { foo: bar }]' => array('foo', '1' => array('bar' => array('foo' => 'bar'))),
+            '[foo, \'@foo.baz\', { \'%foo%\': \'foo is %foo%\', bar: \'%foo%\' }, true, \'@service_container\']' => array('foo', '@foo.baz', array('%foo%' => 'foo is %foo%', 'bar' => '%foo%',), true, '@service_container',),
         );
     }
 
@@ -167,6 +221,8 @@ class InlineTest extends \PHPUnit_Framework_TestCase
             '[foo, { bar: foo }]' => array('foo', array('bar' => 'foo')),
 
             '[foo, { bar: foo, foo: [foo, { bar: foo }] }, [foo, { bar: foo }]]' => array('foo', array('bar' => 'foo', 'foo' => array('foo', array('bar' => 'foo'))), array('foo', array('bar' => 'foo'))),
+
+            '[foo, \'@foo.baz\', { \'%foo%\': \'foo is %foo%\', bar: \'%foo%\' }, true, \'@service_container\']' => array('foo', '@foo.baz', array('%foo%' => 'foo is %foo%', 'bar' => '%foo%',), true, '@service_container',),
         );
     }
 }

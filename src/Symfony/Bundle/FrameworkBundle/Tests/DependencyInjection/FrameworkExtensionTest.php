@@ -33,6 +33,14 @@ abstract class FrameworkExtensionTest extends TestCase
         $this->assertEquals('s3cr3t', $container->getParameterBag()->resolveValue($container->findDefinition('form.csrf_provider')->getArgument(1)));
     }
 
+    public function testProxies()
+    {
+        $container = $this->createContainerFromFile('full');
+
+        $this->assertTrue($container->getParameter('kernel.trust_proxy_headers'));
+        $this->assertEquals(array('127.0.0.1', '10.0.0.1'), $container->getParameter('kernel.trusted_proxies'));
+    }
+
     public function testEsi()
     {
         $container = $this->createContainerFromFile('full');
@@ -77,7 +85,6 @@ abstract class FrameworkExtensionTest extends TestCase
 
         $this->assertTrue($container->hasDefinition('session'), '->registerSessionConfiguration() loads session.xml');
         $this->assertEquals('fr', $container->getParameter('kernel.default_locale'));
-        $this->assertTrue($container->getDefinition('session_listener')->getArgument(1));
         $this->assertEquals('session.storage.native', (string) $container->getAlias('session.storage'));
         $this->assertEquals('session.handler.native_file', (string) $container->getAlias('session.handler'));
 
@@ -183,10 +190,17 @@ abstract class FrameworkExtensionTest extends TestCase
             }
         }
 
+        $rootDirectory = str_replace('/', DIRECTORY_SEPARATOR, realpath(__DIR__.'/../../../../..').'/');
+        $files = array_map(function($resource) use ($rootDirectory, $resources) { return str_replace($rootDirectory, '', realpath($resource[1])); }, $resources);
         $this->assertContains(
-            realpath(__DIR__.'/../../Resources/translations/validators.fr.xlf'),
-            array_map(function($resource) use ($resources) { return realpath($resource[1]); }, $resources),
-            '->registerTranslatorConfiguration() finds FrameworkExtension translation resources'
+            str_replace('/', DIRECTORY_SEPARATOR, 'Symfony/Component/Validator/Resources/translations/validators.en.xlf'),
+            $files,
+            '->registerTranslatorConfiguration() finds Validator translation resources'
+        );
+        $this->assertContains(
+            str_replace('/', DIRECTORY_SEPARATOR, 'Symfony/Component/Form/Resources/translations/validators.en.xlf'),
+            $files,
+            '->registerTranslatorConfiguration() finds Form translation resources'
         );
 
         $calls = $container->getDefinition('translator.default')->getMethodCalls();

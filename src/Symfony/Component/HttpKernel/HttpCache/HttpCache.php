@@ -193,8 +193,6 @@ class HttpCache implements HttpKernelInterface, TerminableInterface
             $response = $this->lookup($request, $catch);
         }
 
-        $response->isNotModified($request);
-
         $this->restoreResponseBody($request, $response);
 
         $response->setDate(new \DateTime(null, new \DateTimeZone('UTC')));
@@ -204,14 +202,16 @@ class HttpCache implements HttpKernelInterface, TerminableInterface
         }
 
         if (null !== $this->esi) {
-            $this->esiCacheStrategy->add($response);
-
             if (HttpKernelInterface::MASTER_REQUEST === $type) {
                 $this->esiCacheStrategy->update($response);
+            } else {
+                $this->esiCacheStrategy->add($response);
             }
         }
 
         $response->prepare($request);
+
+        $response->isNotModified($request);
 
         return $response;
     }
@@ -261,6 +261,15 @@ class HttpCache implements HttpKernelInterface, TerminableInterface
         if ($response->isSuccessful() || $response->isRedirect()) {
             try {
                 $this->store->invalidate($request, $catch);
+
+                // As per the RFC, invalidate Location and Content-Location URLs if present
+                foreach (array('Location', 'Content-Location') as $header) {
+                    if ($uri = $response->headers->get($header)) {
+                        $subRequest = $request::create($uri, 'get', array(), array(), array(), $request->server->all());
+
+                        $this->store->invalidate($subRequest);
+                    }
+                }
 
                 $this->record($request, 'invalidate');
             } catch (\Exception $e) {
@@ -443,6 +452,18 @@ class HttpCache implements HttpKernelInterface, TerminableInterface
             $this->esi->addSurrogateEsiCapability($request);
         }
 
+        // modify the X-Forwarded-For header if needed
+        $forwardedFor = $request->headers->get('X-Forwarded-For');
+        if ($forwardedFor) {
+            $request->headers->set('X-Forwarded-For', $forwardedFor.', '.$request->server->get('REMOTE_ADDR'));
+        } else {
+            $request->headers->set('X-Forwarded-For', $request->server->get('REMOTE_ADDR'));
+        }
+
+        // fix the client IP address by setting it to 127.0.0.1 as HttpCache
+        // is always called from the same process as the backend.
+        $request->server->set('REMOTE_ADDR', '127.0.0.1');
+
         // always a "master" request (as the real master request can be in cache)
         $response = $this->kernel->handle($request, HttpKernelInterface::MASTER_REQUEST, $catch);
         // FIXME: we probably need to also catch exceptions if raw === true
@@ -581,7 +602,7 @@ class HttpCache implements HttpKernelInterface, TerminableInterface
     private function restoreResponseBody(Request $request, Response $response)
     {
         if ('HEAD' === $request->getMethod() || 304 === $response->getStatusCode()) {
-            $response->setContent('');
+            $response->setContent(null);
             $response->headers->remove('X-Body-Eval');
             $response->headers->remove('X-Body-File');
 
@@ -647,7 +668,7 @@ class HttpCache implements HttpKernelInterface, TerminableInterface
      * Records that an event took place.
      *
      * @param Request $request A Request instance
-     * @param string  $event The event name
+     * @param string  $event   The event name
      */
     private function record(Request $request, $event)
     {

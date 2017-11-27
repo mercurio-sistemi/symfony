@@ -81,7 +81,7 @@ class YamlFileLoader extends FileLoader
     /**
      * Parses all imports
      *
-     * @param array $content
+     * @param array  $content
      * @param string $file
      */
     private function parseImports($content, $file)
@@ -99,7 +99,7 @@ class YamlFileLoader extends FileLoader
     /**
      * Parses definitions
      *
-     * @param array $content
+     * @param array  $content
      * @param string $file
      */
     private function parseDefinitions($content, $file)
@@ -117,8 +117,10 @@ class YamlFileLoader extends FileLoader
      * Parses a definition.
      *
      * @param string $id
-     * @param array $service
+     * @param array  $service
      * @param string $file
+     *
+     * @throws InvalidArgumentException When tags are invalid
      */
     private function parseDefinition($id, $service, $file)
     {
@@ -231,7 +233,7 @@ class YamlFileLoader extends FileLoader
      *
      * @return array The file content
      */
-    private function loadFile($file)
+    protected function loadFile($file)
     {
         return $this->validate(Yaml::parse($file), $file);
     }
@@ -239,7 +241,7 @@ class YamlFileLoader extends FileLoader
     /**
      * Validates a YAML file.
      *
-     * @param mixed $content
+     * @param mixed  $content
      * @param string $file
      *
      * @return array
@@ -288,7 +290,10 @@ class YamlFileLoader extends FileLoader
         if (is_array($value)) {
             $value = array_map(array($this, 'resolveServices'), $value);
         } elseif (is_string($value) &&  0 === strpos($value, '@')) {
-            if (0 === strpos($value, '@?')) {
+            if (0 === strpos($value, '@@')) {
+                $value = substr($value, 1);
+                $invalidBehavior = null;
+            } elseif (0 === strpos($value, '@?')) {
                 $value = substr($value, 2);
                 $invalidBehavior = ContainerInterface::IGNORE_ON_INVALID_REFERENCE;
             } else {
@@ -303,7 +308,9 @@ class YamlFileLoader extends FileLoader
                 $strict = true;
             }
 
-            $value = new Reference($value, $invalidBehavior, $strict);
+            if (null !== $invalidBehavior) {
+                $value = new Reference($value, $invalidBehavior, $strict);
+            }
         }
 
         return $value;

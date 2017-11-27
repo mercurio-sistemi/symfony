@@ -12,7 +12,6 @@
 namespace Symfony\Component\HttpFoundation\Tests\Session;
 
 use Symfony\Component\HttpFoundation\Session\Session;
-use Symfony\Component\HttpFoundation\Session\MetadataBag;
 use Symfony\Component\HttpFoundation\Session\Flash\FlashBag;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBag;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
@@ -152,6 +151,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase
 
     public function testSave()
     {
+        $this->session->start();
         $this->session->save();
     }
 
@@ -260,7 +260,7 @@ class SessionTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @covers Symfony\Component\HttpFoundation\Session\Session::count
+     * @covers \Symfony\Component\HttpFoundation\Session\Session::count
      */
     public function testGetCount()
     {

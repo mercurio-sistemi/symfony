@@ -137,8 +137,93 @@ class NormalizerTest extends \PHPUnit_Framework_TestCase
         return array_map(function($v) { return array($v); }, $configs);
     }
 
+    /**
+     * @dataProvider getNumericKeysTests
+     */
+    public function testNumericKeysAsAttributes($denormalized)
+    {
+        $normalized = array(
+            'thing' => array(42 => array('foo', 'bar'), 1337 => array('baz', 'qux')),
+        );
+
+        $this->assertNormalized($this->getNumericKeysTestTree(), $denormalized, $normalized);
+    }
+
+    public function getNumericKeysTests()
+    {
+        $configs = array();
+
+        $configs[] = array(
+            'thing' => array(
+                42 => array('foo', 'bar'), 1337 => array('baz', 'qux'),
+            ),
+        );
+
+        $configs[] = array(
+            'thing' => array(
+                array('foo', 'bar', 'id' => 42), array('baz', 'qux', 'id' => 1337),
+            ),
+        );
+
+        return array_map(function($v) { return array($v); }, $configs);
+    }
+
+    /**
+     * @expectedException Symfony\Component\Config\Definition\Exception\InvalidConfigurationException
+     * @expectedExceptionMessage The attribute "id" must be set for path "root.thing".
+     */
+    public function testNonAssociativeArrayThrowsExceptionIfAttributeNotSet()
+    {
+        $denormalized = array(
+            'thing' => array(
+                array('foo', 'bar'), array('baz', 'qux')
+            )
+        );
+
+        $this->assertNormalized($this->getNumericKeysTestTree(), $denormalized, array());
+    }
+
+    public function testAssociativeArrayPreserveKeys()
+    {
+        $tb = new TreeBuilder();
+        $tree = $tb
+            ->root('root', 'array')
+                ->prototype('array')
+                    ->children()
+                        ->node('foo', 'scalar')->end()
+                    ->end()
+                ->end()
+            ->end()
+            ->buildTree()
+        ;
+
+        $data = array('first' => array('foo' => 'bar'));
+
+        $this->assertNormalized($tree, $data, $data);
+    }
+
     public static function assertNormalized(NodeInterface $tree, $denormalized, $normalized)
     {
         self::assertSame($normalized, $tree->normalize($denormalized));
+    }
+
+    private function getNumericKeysTestTree()
+    {
+        $tb = new TreeBuilder();
+        $tree = $tb
+            ->root('root', 'array')
+                ->children()
+                    ->node('thing', 'array')
+                        ->useAttributeAsKey('id')
+                        ->prototype('array')
+                            ->prototype('scalar')->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+            ->buildTree()
+        ;
+
+        return $tree;
     }
 }

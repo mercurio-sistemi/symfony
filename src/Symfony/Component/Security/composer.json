@@ -24,22 +24,21 @@
     "require-dev": {
         "symfony/form": "2.1.*",
         "symfony/routing": "2.1.*",
-        "doctrine/common": ">=2.1,<2.3-dev",
-        "doctrine/dbal": ">=2.1,<2.3-dev"
+        "symfony/validator": "2.1.*",
+        "doctrine/common": "~2.2",
+        "doctrine/dbal": "~2.2"
     },
     "suggest": {
-        "symfony/class-loader": "self.version",
-        "symfony/finder": "self.version",
-        "symfony/form": "self.version",
-        "symfony/routing": "self.version"
+        "symfony/class-loader": "2.1.*",
+        "symfony/finder": "2.1.*",
+        "symfony/form": "2.1.*",
+        "symfony/validator": "2.1.*",
+        "symfony/routing": "2.1.*",
+        "doctrine/dbal": "to use the built-in ACL implementation"
     },
     "autoload": {
         "psr-0": { "Symfony\\Component\\Security": "" }
     },
     "target-dir": "Symfony/Component/Security",
-    "extra": {
-        "branch-alias": {
-            "dev-master": "2.1-dev"
-        }
-    }
+    "minimum-stability": "dev"
 }

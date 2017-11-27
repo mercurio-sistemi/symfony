@@ -28,12 +28,12 @@ class MockArraySessionStorageTest extends \PHPUnit_Framework_TestCase
     private $storage;
 
     /**
-     * @var array
+     * @var AttributeBag
      */
     private $attributes;
 
     /**
-     * @var array
+     * @var FlashBag
      */
     private $flashes;
 
@@ -94,5 +94,13 @@ class MockArraySessionStorageTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('', $this->storage->getId());
         $this->storage->start();
         $this->assertNotEquals('', $this->storage->getId());
+    }
+
+    /**
+     * @expectedException RuntimeException
+     */
+    public function testUnstartedSave()
+    {
+        $this->storage->save();
     }
 }

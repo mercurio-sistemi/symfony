@@ -339,7 +339,7 @@ class Form extends Link implements \ArrayAccess
                     throw new \LogicException('The selected node does not have a form ancestor.');
                 }
             } while ('form' != $node->nodeName);
-        } elseif('form' != $node->nodeName) {
+        } elseif ('form' != $node->nodeName) {
             throw new \LogicException(sprintf('Unable to submit on a "%s" tag.', $node->nodeName));
         }
 
@@ -358,8 +358,8 @@ class Form extends Link implements \ArrayAccess
         $root->appendChild($button);
         $xpath = new \DOMXPath($document);
 
-        foreach ($xpath->query('descendant::input | descendant::textarea | descendant::select', $root) as $node) {
-            if (!$node->hasAttribute('name')) {
+        foreach ($xpath->query('descendant::input | descendant::button | descendant::textarea | descendant::select', $root) as $node) {
+            if (!$node->hasAttribute('name') || !$node->getAttribute('name')) {
                 continue;
             }
 
@@ -494,13 +494,13 @@ class FormFieldRegistry
     public function set($name, $value)
     {
         $target =& $this->get($name);
-        if (is_array($value)) {
+        if (!is_array($value) || $target instanceof Field\ChoiceFormField) {
+            $target->setValue($value);
+        } else {
             $fields = self::create($name, $value);
             foreach ($fields->all() as $k => $v) {
                 $this->set($k, $v);
             }
-        } else {
-            $target->setValue($value);
         }
     }
 
@@ -525,7 +525,7 @@ class FormFieldRegistry
      *
      * @return FormFieldRegistry
      */
-    static private function create($base, array $values)
+    private static function create($base, array $values)
     {
         $registry = new static();
         $registry->base = $base;

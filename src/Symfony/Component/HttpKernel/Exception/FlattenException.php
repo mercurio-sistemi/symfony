@@ -30,14 +30,19 @@ class FlattenException
     private $file;
     private $line;
 
-    static public function create(\Exception $exception, $statusCode = null, array $headers = array())
+    public static function create(\Exception $exception, $statusCode = null, array $headers = array())
     {
         $e = new static();
         $e->setMessage($exception->getMessage());
         $e->setCode($exception->getCode());
 
+        if ($exception instanceof HttpExceptionInterface) {
+            $statusCode = $exception->getStatusCode();
+            $headers = array_merge($headers, $exception->getHeaders());
+        }
+
         if (null === $statusCode) {
-            $statusCode = $exception instanceof HttpExceptionInterface ? $exception->getStatusCode() : 500;
+            $statusCode = 500;
         }
 
         $e->setStatusCode($statusCode);
@@ -190,7 +195,7 @@ class FlattenException
                 'short_class' => $class,
                 'class'       => isset($entry['class']) ? $entry['class'] : '',
                 'type'        => isset($entry['type']) ? $entry['type'] : '',
-                'function'    => $entry['function'],
+                'function'    => isset($entry['function']) ? $entry['function'] : null,
                 'file'        => isset($entry['file']) ? $entry['file'] : null,
                 'line'        => isset($entry['line']) ? $entry['line'] : null,
                 'args'        => isset($entry['args']) ? $this->flattenArgs($entry['args']) : array(),

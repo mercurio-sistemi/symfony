@@ -33,10 +33,11 @@ class RegisterKernelListenersPass implements CompilerPassInterface
                 }
 
                 if (!isset($event['method'])) {
-                    $event['method'] = 'on'.preg_replace(array(
-                        '/(?<=\b)[a-z]/ie',
-                        '/[^a-z0-9]/i'
-                    ), array('strtoupper("\\0")', ''), $event['event']);
+                    $event['method'] = 'on'.preg_replace_callback(array(
+                        '/(?<=\b)[a-z]/i',
+                        '/[^a-z0-9]/i',
+                    ), function ($matches) { return strtoupper($matches[0]); }, $event['event']);
+                    $event['method'] = preg_replace('/[^a-z0-9]/i', '', $event['method']);
                 }
 
                 $definition->addMethodCall('addListenerService', array($event['event'], array($id, $event['method']), $priority));
@@ -44,7 +45,7 @@ class RegisterKernelListenersPass implements CompilerPassInterface
         }
 
         foreach ($container->findTaggedServiceIds('kernel.event_subscriber') as $id => $attributes) {
-            // We must assume that the class value has been correcly filled, even if the service is created by a factory
+            // We must assume that the class value has been correctly filled, even if the service is created by a factory
             $class = $container->getDefinition($id)->getClass();
 
             $refClass = new \ReflectionClass($class);

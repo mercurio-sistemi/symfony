@@ -58,9 +58,19 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
         $disableEntities = libxml_disable_entity_loader(true);
         libxml_clear_errors();
 
-        $xml = simplexml_load_string($data);
+        $dom = new \DOMDocument();
+        $dom->loadXML($data, LIBXML_NONET);
+
         libxml_use_internal_errors($internalErrors);
         libxml_disable_entity_loader($disableEntities);
+
+        foreach ($dom->childNodes as $child) {
+            if ($child->nodeType === XML_DOCUMENT_TYPE_NODE) {
+                throw new UnexpectedValueException('Document types are not allowed.');
+            }
+        }
+
+        $xml = simplexml_import_dom($dom);
 
         if ($error = libxml_get_last_error()) {
             throw new UnexpectedValueException($error->message);
@@ -124,7 +134,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
 
     /**
      * @param DOMNode $node
-     * @param string $val
+     * @param string  $val
      *
      * @return Boolean
      */
@@ -143,7 +153,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
 
     /**
      * @param DOMNode $node
-     * @param string $val
+     * @param string  $val
      *
      * @return Boolean
      */
@@ -157,7 +167,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
 
     /**
      * @param DOMNode $node
-     * @param string $val
+     * @param string  $val
      *
      * @return Boolean
      */
@@ -170,7 +180,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     }
 
     /**
-     * @param DOMNode $node
+     * @param DOMNode             $node
      * @param DOMDocumentFragment $fragment
      *
      * @return Boolean
@@ -230,11 +240,15 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
 
             if ($key === 'item') {
                 if (isset($value['@key'])) {
-                    $data[(string) $value['@key']] = $value['#'];
+                    if (isset($value['#'])) {
+                        $data[(string) $value['@key']] = $value['#'];
+                    } else {
+                        $data[(string) $value['@key']] = $value;
+                    }
                 } else {
                     $data['item'][] = $value;
                 }
-            } elseif (array_key_exists($key, $data)) {
+            } elseif (array_key_exists($key, $data) || $key == "entry") {
                 if ((false === is_array($data[$key]))  || (false === isset($data[$key][0]))) {
                     $data[$key] = array($data[$key]);
                 }
@@ -250,8 +264,8 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
     /**
      * Parse the data and convert it to DOMElements
      *
-     * @param DOMNode $parentNode
-     * @param array|object $data data
+     * @param DOMNode      $parentNode
+     * @param array|object $data       data
      *
      * @return Boolean
      */
@@ -350,7 +364,7 @@ class XmlEncoder extends SerializerAwareEncoder implements EncoderInterface, Dec
      * Tests the value being passed and decide what sort of element to create
      *
      * @param DOMNode $node
-     * @param mixed $val
+     * @param mixed   $val
      *
      * @return Boolean
      */

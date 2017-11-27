@@ -69,8 +69,12 @@ class ResolveInvalidReferencesPass implements CompilerPassInterface
     /**
      * Processes arguments to determine invalid references.
      *
-     * @param array   $arguments An array of Reference objects
+     * @param array   $arguments    An array of Reference objects
      * @param Boolean $inMethodCall
+     *
+     * @return array
+     *
+     * @throws \RuntimeException When the config is invalid
      */
     private function processArguments(array $arguments, $inMethodCall = false)
     {
@@ -85,7 +89,7 @@ class ResolveInvalidReferencesPass implements CompilerPassInterface
 
                 // resolve invalid behavior
                 if ($exists && ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE !== $invalidBehavior) {
-                    $arguments[$k] = new Reference($id);
+                    $arguments[$k] = new Reference($id, ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE, $argument->isStrict());
                 } elseif (!$exists && ContainerInterface::NULL_ON_INVALID_REFERENCE === $invalidBehavior) {
                     $arguments[$k] = null;
                 } elseif (!$exists && ContainerInterface::IGNORE_ON_INVALID_REFERENCE === $invalidBehavior) {
